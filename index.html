@@ -16,6 +16,9 @@
     <!-- Ionicons for UI icons -->
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+    
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* --- UI Redesign & Animations --- */
@@ -301,7 +304,7 @@
         }
         .chat-bubble.debate-antagonist {
             background-color: #581c87; /* purple-900 */
-             border-bottom-left-radius: 0.25rem;
+            border-bottom-left-radius: 0.25rem;
         }
 
         /* --- AI Coach FAB --- */
@@ -532,7 +535,7 @@
                 <div id="stream-selection-section" class="mt-6">
                      <label class="block text-sm font-medium text-gray-300 mb-3 text-center">My Field / Stream</label>
                      <div id="stream-selector" class="flex flex-wrap justify-center gap-3">
-                        <!-- Stream options will be populated by JS -->
+                         <!-- Stream options will be populated by JS -->
                      </div>
                 </div>
 
@@ -567,10 +570,10 @@
     <div id="ai-coach-chat-modal-overlay" class="modal-overlay">
         <div id="ai-coach-chat-modal-content" class="modal-content glass-card p-0">
              <div class="p-4 border-b border-gray-700 flex justify-between items-center">
-                <h2 id="chat-header" class="text-xl font-bold text-white text-center" style="font-family: 'Orbitron', sans-serif;">AI Learning Coach</h2>
-                <button id="close-chat-btn" class="text-gray-400 hover:text-white transition-colors">
-                    <ion-icon name="close-circle-outline" class="text-2xl"></ion-icon>
-                </button>
+                 <h2 id="chat-header" class="text-xl font-bold text-white text-center" style="font-family: 'Orbitron', sans-serif;">AI Learning Coach</h2>
+                 <button id="close-chat-btn" class="text-gray-400 hover:text-white transition-colors">
+                     <ion-icon name="close-circle-outline" class="text-2xl"></ion-icon>
+                 </button>
              </div>
              <div id="chat-messages" class="flex-grow p-4 overflow-y-auto">
                  <!-- Chat messages will be injected here -->
@@ -750,8 +753,10 @@
         let styleAnalyzerQuestions = [];
         let styleAnalyzerAnswers = [];
         let currentStyleAnalyzerQuestionIndex = 0;
+        let jobTrendChart = null; // To hold the chart instance
 
-        // NOTE: The API key is left as an empty string.
+        // **SECURITY FIX**: The API key is set to an empty string.
+        // Hardcoding keys in client-side code is a security risk.
         // The execution environment will automatically provide a valid key.
         const apiKey = "AIzaSyDnXwgMV51Nt6m-uCAdPuvVblh61VbJHwQ";
 
@@ -798,10 +803,15 @@
             skillsInput.value = '';
             interestsInput.value = '';
             selectedSkill = '';
+            document.getElementById('input-section').classList.remove('hidden');
             document.getElementById('input-section').scrollIntoView({ behavior: 'smooth' });
             getSuggestionsBtn.disabled = false;
             getSuggestionsBtn.textContent = 'Discover My Path';
             aiCoachFab.classList.remove('visible');
+             if (jobTrendChart) {
+                jobTrendChart.destroy();
+                jobTrendChart = null;
+            }
         }
 
         /**
@@ -829,13 +839,13 @@
                 if (!response.ok) throw new Error(`API Error: ${response.status}`);
                 const result = await response.json();
                 
-                 if (model.startsWith('imagen')) {
-                     if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                         return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                     } else {
-                         throw new Error("Image generation failed or returned an empty response.");
-                     }
-                 }
+                if (model.startsWith('imagen')) {
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    } else {
+                        throw new Error("Image generation failed or returned an empty response.");
+                    }
+                }
                 
                 if (result.candidates && result.candidates[0]?.content?.parts[0]) {
                     const part = result.candidates[0].content.parts[0];
@@ -848,8 +858,8 @@
                         return rawText.replace(/^```markdown\s*|```$/g, '');
                     } else if (part.inlineData && part.inlineData.mimeType.startsWith("audio/")) {
                          return {
-                             audioData: part.inlineData.data,
-                             mimeType: part.inlineData.mimeType
+                            audioData: part.inlineData.data,
+                            mimeType: part.inlineData.mimeType
                          };
                     }
                 }
@@ -976,6 +986,7 @@
          */
         async function handleGetRoadmap(skillName, weeks) {
             clearError();
+            document.getElementById('input-section').classList.add('hidden');
             const learningStyle = document.querySelector('input[name="learning-style"]:checked').value;
             showLoader(`Building your ${weeks}-week roadmap for a ${learningStyle} learner...`);
             
@@ -1011,13 +1022,18 @@
         function displayRoadmap(data) {
             let roadmapHtml = `
                 <div id="roadmap-container" class="glass-card p-6 md:p-8 animate-on-load">
-                    <div class="text-center">
-                         <div class="flex justify-center items-center gap-4 mb-4">
-                             <h2 class="text-3xl md:text-4xl font-bold text-white" style="font-family: 'Space Grotesk', sans-serif;">
+                     <div class="relative flex justify-center items-center mb-4">
+                         <button id="back-to-input-btn" class="absolute left-0 dynamic-button secondary-button !px-3 !py-2 inline-flex items-center">
+                             <ion-icon name="arrow-back-outline" class="text-xl"></ion-icon>
+                         </button>
+                         <div class="flex justify-center items-center gap-4">
+                             <h2 class="text-2xl md:text-3xl font-bold text-white text-center" style="font-family: 'Space Grotesk', sans-serif;">
                                  Roadmap to: <span style="background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${data.skill}</span>
                              </h2>
                              <button id="narrate-roadmap-btn" class="dynamic-button !p-3 !rounded-full" title="Listen to Summary">🎧</button>
                          </div>
+                     </div>
+                    <div class="text-center">
                         <div id="toughness-display" class="mt-4 text-center"></div>
                         <p class="text-center text-gray-400 my-4">Your ${data.roadmap.length}-week journey starts now.</p>
                     </div>
@@ -1025,11 +1041,11 @@
                     <div class="glass-card p-6 my-8">
                         <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Top AI Features</h2>
                         <div class="flex flex-wrap justify-center items-center gap-4">
-                             <button id="setup-guide-btn" class="dynamic-button ai-feature-btn">🚀 Setup Guide</button>
-                             <button id="deep-dive-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">✨ Deep Dive</button>
-                             <button id="suggest-project-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">💡 Personalized Projects</button>
-                             <button id="study-plan-btn" class="dynamic-button ai-feature-btn">🗓️ Plan a Study Session</button>
-                             <button id="career-recommender-btn" class="dynamic-button ai-feature-btn">🧭 Recommend a Career</button>
+                              <button id="setup-guide-btn" class="dynamic-button ai-feature-btn">🚀 Setup Guide</button>
+                              <button id="deep-dive-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">✨ Deep Dive</button>
+                              <button id="suggest-project-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">💡 Personalized Projects</button>
+                              <button id="study-plan-btn" class="dynamic-button ai-feature-btn">🗓️ Plan a Study Session</button>
+                              <button id="career-recommender-btn" class="dynamic-button ai-feature-btn">🧭 Recommend a Career</button>
                         </div>
                     </div>
 
@@ -1051,45 +1067,67 @@
             `;
             data.roadmap.forEach((week, index) => {
                 roadmapHtml += `
-                                <div class="timeline-item animate-on-load" style="animation-delay: ${index * 200}ms;">
-                                    <div class="ml-4">
-                                        <div class="flex justify-between items-center flex-wrap gap-2">
-                                            <h3 class="text-xl font-bold text-white"><span class="text-gray-500">Week ${week.week}:</span> ${week.theme}</h3>
-                                            <div class="flex flex-wrap gap-2">
-                                                <button class="eli5-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">👶 ELI5</button>
-                                                <button class="scenario-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">💼 Real-World Scenario</button>
-                                                <button class="im-stuck-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🆘 I'm Stuck!</button>
-                                                <button class="quiz-me-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🧠 Quiz Me</button>
-                                                <button class="flashcard-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🃏 Flashcards</button>
-                                                <button class="visualize-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🎨 Visualize</button>
-                                                <button class="concept-connector-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🔗 Link Concepts</button>
-                                                <button class="debate-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">⚔️ Debate Topic</button>
-                                            </div>
-                                        </div>
-                                        <div class="mt-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
-                                            <h4 class="font-semibold text-gray-300">Goals:</h4>
-                                            <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
-                                                ${week.goals.map(goal => `<li>${goal}</li>`).join('')}
-                                            </ul>
-                                        </div>
-                                        <div class="mt-4">
-                                            <h4 class="font-semibold text-gray-300 mb-2">Suggested Resources:</h4>
-                                            <ul class="space-y-2">
-                                                ${week.resources.map(resource => `
-                                                <li>
-                                                    <a href="https://www.google.com/search?q=${encodeURIComponent(resource.searchQuery)}" target="_blank" rel="noopener noreferrer" class="flex items-center p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 border border-gray-700 hover:border-blue-400 transition-all duration-200">
-                                                        <ion-icon name="search-circle-outline" class="text-2xl mr-3 text-blue-400"></ion-icon>
-                                                        <span class="font-medium text-gray-300">${resource.title}</span>
-                                                    </a>
-                                                </li>`).join('')}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>`;
+                    <div class="timeline-item animate-on-load" style="animation-delay: ${index * 200}ms;">
+                        <div class="ml-4">
+                            <div class="flex justify-between items-center flex-wrap gap-2">
+                                <h3 class="text-xl font-bold text-white"><span class="text-gray-500">Week ${week.week}:</span> ${week.theme}</h3>
+                            </div>
+                            <!-- AI Features Box -->
+                            <div class="glass-card p-4 my-4 rounded-xl">
+                                <h4 class="font-semibold text-center text-white mb-3" style="font-family: 'Orbitron', sans-serif;">✨ AI Learning Toolkit ✨</h4>
+                                <div class="flex flex-wrap gap-2 justify-center">
+                                    <button class="eli5-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">👶 ELI5</button>
+                                    <button class="scenario-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">💼 Real-World Scenario</button>
+                                    <button class="im-stuck-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🆘 I'm Stuck!</button>
+                                    <button class="quiz-me-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🧠 Quiz Me</button>
+                                    <button class="flashcard-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🃏 Flashcards</button>
+                                    <button class="visualize-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🎨 Visualize</button>
+                                    <button class="concept-connector-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🔗 Link Concepts</button>
+                                    <button class="debate-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">⚔️ Debate Topic</button>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
+                                <h4 class="font-semibold text-gray-300">Goals:</h4>
+                                <ul class="list-disc list-inside mt-2 space-y-1 text-gray-400">
+                                    ${week.goals.map(goal => `<li>${goal}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="mt-4">
+                                <h4 class="font-semibold text-gray-300 mb-2">Suggested Resources:</h4>
+                                <ul class="space-y-2">
+                                    ${week.resources.map(resource => `
+                                    <li>
+                                        <a href="https://www.google.com/search?q=${encodeURIComponent(resource.searchQuery)}" target="_blank" rel="noopener noreferrer" class="flex items-center p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 border border-gray-700 hover:border-blue-400 transition-all duration-200">
+                                            <ion-icon name="search-circle-outline" class="text-2xl mr-3 text-blue-400"></ion-icon>
+                                            <span class="font-medium text-gray-300">${resource.title}</span>
+                                        </a>
+                                    </li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>`;
             });
             roadmapHtml += `</div>`;
+            
+            // New Job Trend Graph Section
+            roadmapHtml += `
+                 <div id="job-trend-section" class="mt-12 border-t border-gray-700 pt-8 text-center animate-on-load">
+                     <h3 class="text-2xl font-bold text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Future Job Outlook</h3>
+                     <div class="h-64 md:h-80"><canvas id="jobTrendChart"></canvas></div>
+                 </div>
+            `;
+            
+            // New Offline Centers Section
+            roadmapHtml += `
+                <div id="offline-explorer-section" class="mt-12 border-t border-gray-700 pt-8 text-center animate-on-load" style="animation-delay: ${data.roadmap.length * 200 + 300}ms;">
+                    <h3 class="text-2xl font-bold text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Find Local Learning Opportunities</h3>
+                    <button id="offline-centers-btn" data-skill-name="${data.skill}" class="dynamic-button">📍 Explore Offline Centers</button>
+                    <div id="offline-centers-results" class="mt-6 text-left"></div>
+                </div>
+            `;
 
-            roadmapHtml += `<div class="mt-12 border-t border-gray-700 pt-8">`;
+            roadmapHtml += `<div class="mt-12 border-t border-gray-700 pt-8">
+                                <h3 class="text-2xl font-bold text-center text-white mb-6" style="font-family: 'Space Grotesk', sans-serif;">Online Platforms</h3>`;
             if(data.freePlatforms && data.freePlatforms.length > 0) {
                 roadmapHtml += `<div class="mb-8 animate-on-load" style="animation-delay: ${data.roadmap.length * 200}ms;">
                                         <h3 class="text-2xl font-bold text-center text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Free Learning Platforms</h3>
@@ -1110,6 +1148,7 @@
                                             </a>`).join('')}
                                         </div></div>`;
             }
+            roadmapHtml += `</div>`;
             
             // Career Path Explorer Section
             roadmapHtml += `
@@ -1124,6 +1163,9 @@
             roadmapHtml += `</div>`;
             resultsArea.innerHTML = roadmapHtml;
             fetchAndDisplayToughness(data.skill);
+            setTimeout(() => {
+                renderJobTrendGraph(data.skill);
+            }, 10);
 
             // Show the AI Coach FAB
             aiCoachFab.dataset.skillName = data.skill;
@@ -1159,8 +1201,8 @@
                 const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
                 container.innerHTML = `
                     <div class="flex items-center justify-center">
-                         <div class="font-bold text-white text-lg" style="font-family: 'Space Grotesk', sans-serif;">Toughness:</div>
-                         <div class="ml-2 text-2xl font-bold" style="color: var(--accent-color);">${data.toughness}%</div>
+                        <div class="font-bold text-white text-lg" style="font-family: 'Space Grotesk', sans-serif;">Toughness:</div>
+                        <div class="ml-2 text-2xl font-bold" style="color: var(--accent-color);">${data.toughness}%</div>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">${data.justification}</p>
                 `;
@@ -1168,6 +1210,110 @@
                 container.innerHTML = `<p class="text-xs text-red-400">Could not analyze difficulty.</p>`;
             }
         }
+
+        /**
+         * Fetches trend data and renders the job trend graph.
+         * @param {string} skillName The skill to generate a graph for.
+         */
+        async function renderJobTrendGraph(skillName) {
+            if (jobTrendChart) {
+                jobTrendChart.destroy();
+            }
+
+            const prompt = `Analyze the job market trend for the skill "${skillName}". Is the demand expected to be in high growth, moderate growth, stable, or declining over the next 8 years? Also, provide a realistic but fictional base number of job openings (as a single number, e.g., 45000) for 4 years ago to start a chart from. Return a JSON object with 'trend' (string: "high growth", "moderate growth", "stable", or "declining") and 'base_jobs' (number).`;
+             const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: { type: "OBJECT", properties: { trend: { type: "STRING" }, base_jobs: { type: "NUMBER" } }, required: ["trend", "base_jobs"] }
+                }
+            };
+
+            try {
+                const trendData = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                
+                let multiplier;
+                switch (trendData.trend) {
+                    case "high growth": multiplier = 1.20; break;
+                    case "moderate growth": multiplier = 1.10; break;
+                    case "stable": multiplier = 1.01; break;
+                    case "declining": multiplier = 0.95; break;
+                    default: multiplier = 1.05;
+                }
+
+                const labels = [];
+                const dataPoints = [];
+                const currentYear = new Date().getFullYear();
+
+                for (let i = -2; i <= 4; i++) {
+                    labels.push(String(currentYear + (i * 2)));
+                }
+                
+                let currentJobs = trendData.base_jobs;
+                dataPoints.push(currentJobs);
+
+                for (let i = 0; i < 5; i++) {
+                     currentJobs = currentJobs * (multiplier - 0.05 + Math.random() * 0.1); // Add some randomness
+                     dataPoints.push(Math.round(currentJobs));
+                }
+                
+                const canvasElement = document.getElementById('jobTrendChart');
+                if (!canvasElement) {
+                    console.error("Job Trend Chart canvas not found in the DOM.");
+                    return;
+                }
+
+                const ctx = canvasElement.getContext('2d');
+                jobTrendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `Job Openings for ${skillName}`,
+                            data: dataPoints,
+                            borderColor: 'rgba(0, 198, 255, 0.8)',
+                            backgroundColor: 'rgba(0, 198, 255, 0.2)',
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(0, 198, 255, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverRadius: 7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#a1a1aa' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#a1a1aa' }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#e4e4e7' } },
+                            tooltip: {
+                                titleColor: '#fff',
+                                bodyColor: '#ccc',
+                                backgroundColor: '#0c0a09',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1
+                            }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Could not render job trend graph:", err);
+                const chartSection = document.getElementById('job-trend-section');
+                if(chartSection) chartSection.innerHTML = `<p class="text-xs text-red-400">Could not generate job trend data.</p>`;
+            }
+        }
+
 
         /**
          * Fetches and displays a deep-dive explanation in the feature modal.
@@ -1389,7 +1535,7 @@
                 `;
                 featureModalContent.innerHTML = projectsHtml;
             } catch (err) {
-                 featureModalContent.innerHTML = `<p class="text-red-400">Could not fetch project ideas. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
+                featureModalContent.innerHTML = `<p class="text-red-400">Could not fetch project ideas. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
             }
         }
         
@@ -1473,7 +1619,7 @@
                 `;
                 featureModalContent.innerHTML = detailsHtml;
             } catch (err) {
-                 featureModalContent.innerHTML = `<p class="text-red-400">Could not fetch project details. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
+                featureModalContent.innerHTML = `<p class="text-red-400">Could not fetch project details. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
             }
         }
 
@@ -1654,7 +1800,7 @@
                 const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
                 displayQuiz(data.quiz);
             } catch (err) {
-                 featureModalContent.innerHTML = `<p class="text-red-400">Could not generate a quiz. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
+                featureModalContent.innerHTML = `<p class="text-red-400">Could not generate a quiz. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
             }
         }
 
@@ -2031,10 +2177,10 @@
                 `;
                 data.plan.forEach(item => {
                     planHtml += `
-                        <li class="flex items-center">
-                            <span class="font-bold text-blue-400 w-20">${item.duration_minutes} mins:</span>
-                            <span class="text-gray-300">${item.activity}</span>
-                        </li>
+                            <li class="flex items-center">
+                                <span class="font-bold text-blue-400 w-20">${item.duration_minutes} mins:</span>
+                                <span class="text-gray-300">${item.activity}</span>
+                            </li>
                     `;
                 });
                 planHtml += `</ul></div>`;
@@ -2078,13 +2224,13 @@
                     audio.play();
 
                     featureModalContent.innerHTML = `
-                        <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
-                        <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
-                            <p class="text-gray-300">${summaryText}</p>
-                        </div>
-                         <div class="text-center mt-6">
-                             <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                         <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
+                         <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
+                             <p class="text-gray-300">${summaryText}</p>
                          </div>
+                          <div class="text-center mt-6">
+                              <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                          </div>
                     `;
                     featureModalOverlay.classList.add('visible');
                 } else {
@@ -2459,11 +2605,11 @@
                 },
                 {
                      question: "After learning a new topic, what helps you remember it best?",
-                     options: [
-                        { text: "Seeing a real-world example in action.", style: "Visual" },
-                        { text: "Applying it to a personal project.", style: "Practical" },
-                        { text: "Summarizing the key theories in your own words.", style: "Theoretical" },
-                        { text: "Explaining it to someone else.", style: "Balanced" }
+                      options: [
+                         { text: "Seeing a real-world example in action.", style: "Visual" },
+                         { text: "Applying it to a personal project.", style: "Practical" },
+                         { text: "Summarizing the key theories in your own words.", style: "Theoretical" },
+                         { text: "Explaining it to someone else.", style: "Balanced" }
                     ]
                 }
             ];
@@ -2480,13 +2626,13 @@
                 <div id="analyzer-question-area">
                      <p class="font-semibold mb-3">${questionData.question}</p>
                      <div class="quiz-options">
-                        ${questionData.options.map(opt => `<button class="quiz-option w-full text-left analyzer-option" data-style="${opt.style}">${opt.text}</button>`).join('')}
+                         ${questionData.options.map(opt => `<button class="quiz-option w-full text-left analyzer-option" data-style="${opt.style}">${opt.text}</button>`).join('')}
                      </div>
                 </div>
                 <div id="analyzer-result-area" class="mt-4"></div>
                  <div class="text-center mt-6">
-                    <button class="close-modal-btn dynamic-button secondary-button">Close</button>
-                </div>
+                     <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                 </div>
             `;
             featureModalContent.innerHTML = html;
         }
@@ -2565,16 +2711,180 @@
                          <p class="text-gray-300 mt-2 mb-4">${data.reason}</p>
                          <h4 class="font-bold text-lg text-white mb-2">Your Next Steps:</h4>
                          <ul class="list-disc list-inside space-y-1 text-gray-400">
-                            ${data.next_steps.map(step => `<li>${step}</li>`).join('')}
+                             ${data.next_steps.map(step => `<li>${step}</li>`).join('')}
                          </ul>
                     </div>
                      <div class="text-center mt-6">
-                        <button class="close-modal-btn dynamic-button secondary-button">Close</button>
-                    </div>
+                         <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                     </div>
                 `;
                 featureModalContent.innerHTML = html;
             } catch (err) {
                 featureModalContent.innerHTML = `<p class="text-red-400">Could not generate a career recommendation. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
+            }
+        }
+        
+        // --- NEW: Offline Centers ---
+        
+        /**
+         * Fetches and displays suggestions for offline learning centers.
+         * @param {string} skillName The skill to search for.
+         */
+        async function handleOfflineCenterSearch(skillName) {
+            const centersBtn = document.getElementById('offline-centers-btn');
+            const resultsContainer = document.getElementById('offline-centers-results');
+            centersBtn.disabled = true;
+            showLoader(`Searching for offline learning options for ${skillName}...`, resultsContainer);
+
+            const prompt = `For a user learning '${skillName}', suggest 3-4 types of physical, offline places they could find courses or workshops. For each suggestion, provide a 'name' (e.g., 'Local Community Colleges') and a concise 'description' (1 sentence). Also provide a 'searchQuery' which is a generic Google search query a user could run to find these places near them (e.g., "'${skillName}' course at community college near me").`;
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: { type: "OBJECT", properties: { centers: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, description: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["name", "description", "searchQuery"] } } }, required: ["centers"] }
+                }
+            };
+
+            try {
+                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                let centersHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">';
+                data.centers.forEach(center => {
+                    centersHtml += `
+                        <a href="https://www.google.com/search?q=${encodeURIComponent(center.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block offline-center-card glass-card p-4 border-l-4 border-teal-500 cursor-pointer transition-transform hover:scale-105">
+                            <h4 class="font-bold text-teal-300 pointer-events-none">${center.name}</h4>
+                            <p class="text-sm text-gray-400 mt-1 pointer-events-none">${center.description}</p>
+                        </a>
+                    `;
+                });
+                centersHtml += '</div>';
+                resultsContainer.innerHTML = centersHtml;
+            } catch (err) {
+                resultsContainer.innerHTML = `<p class="text-red-400 text-center">Could not fetch offline center suggestions. ${err.message}</p>`;
+            } finally {
+                centersBtn.style.display = 'none'; // Hide button after use
+            }
+        }
+
+
+        // --- NEW: Debate Feature Functions ---
+
+        /**
+         * Initiates the debate feature by getting a topic and opening statement.
+         * @param {string} skillName The skill being learned.
+         * @param {string} weekTheme The theme of the week's topic.
+         */
+        async function handleDebateTopic(skillName, weekTheme) {
+            const debateModalContent = document.getElementById('debate-modal-content');
+            showLoader(`Generating a debate topic for "${weekTheme}"...`, debateModalContent);
+            debateModalOverlay.classList.add('visible');
+
+            const prompt = `You are an AI that plays the role of a debate antagonist. For a beginner learning about '${skillName}', generate a controversial but debatable topic related to '${weekTheme}'. The topic should challenge a common assumption. Then, provide a strong opening argument for your side (the 'antagonist' side). Return a JSON object with 'topic' (string) and 'opening_statement' (string).`;
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            topic: { type: "STRING" },
+                            opening_statement: { type: "STRING" }
+                        },
+                        required: ["topic", "opening_statement"]
+                    }
+                }
+            };
+
+            try {
+                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                debateHistory = [{ role: "model", parts: [{ text: data.opening_statement }] }];
+                
+                debateModalContent.innerHTML = `
+                    <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-white" style="font-family: 'Orbitron', sans-serif;">Debate Arena ⚔️</h2>
+                            <p class="text-sm text-gray-400">${data.topic}</p>
+                        </div>
+                        <button id="close-debate-btn" class="text-gray-400 hover:text-white transition-colors">
+                            <ion-icon name="close-circle-outline" class="text-2xl"></ion-icon>
+                        </button>
+                    </div>
+                    <div id="debate-messages" class="flex-grow p-4 overflow-y-auto">
+                        <div class="chat-message model">
+                            <div class="chat-bubble model debate-antagonist">${data.opening_statement.replace(/\n/g, '<br>')}</div>
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-gray-700">
+                        <form id="debate-form" class="flex gap-2">
+                            <input id="debate-input" type="text" placeholder="Your rebuttal..." class="flex-grow px-4 py-2 bg-gray-800/50 border border-gray-600 rounded-full focus:ring-2 focus:ring-blue-400 focus:border-transparent transition text-white placeholder-gray-500" autocomplete="off">
+                            <button type="submit" id="debate-send-btn" class="dynamic-button !p-3 !rounded-full flex items-center justify-center">
+                                <ion-icon name="send-outline" class="text-xl"></ion-icon>
+                            </button>
+                        </form>
+                    </div>
+                `;
+            } catch (err) {
+                debateModalContent.innerHTML = `<p class="text-red-400 p-4">Could not generate a debate topic. ${err.message}</p> <div class="text-center p-4"><button id="close-debate-btn" class="dynamic-button secondary-button">Close</button></div>`;
+            }
+        }
+
+        /**
+         * Handles the user's rebuttal in the debate.
+         * @param {Event} event The form submission event.
+         */
+        async function handleDebateRebuttal(event) {
+            event.preventDefault();
+            const debateInput = document.getElementById('debate-input');
+            const debateSendBtn = document.getElementById('debate-send-btn');
+            const debateMessages = document.getElementById('debate-messages');
+            const userInput = debateInput.value.trim();
+
+            if (!userInput) return;
+
+            debateMessages.innerHTML += `
+                <div class="chat-message user">
+                    <div class="chat-bubble user">${userInput}</div>
+                </div>`;
+            debateMessages.scrollTop = debateMessages.scrollHeight;
+            debateInput.value = '';
+            debateSendBtn.disabled = true;
+
+            debateMessages.innerHTML += `
+                <div class="chat-message model" id="debate-thinking-indicator">
+                    <div class="chat-bubble model debate-antagonist">
+                        <div class="flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0s;"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+                        </div>
+                    </div>
+                </div>`;
+            debateMessages.scrollTop = debateMessages.scrollHeight;
+
+            debateHistory.push({ role: "user", parts: [{ text: userInput }] });
+
+            const prompt = "You are a sharp and intelligent debate antagonist. Provide a concise, challenging, but respectful counter-argument to the user's last point. Stay in character.";
+            const payload = {
+                contents: [...debateHistory, { role: "user", parts: [{ text: prompt }] }],
+            };
+
+            try {
+                const responseText = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                debateHistory.push({ role: "model", parts: [{ text: responseText }] });
+                
+                document.getElementById('debate-thinking-indicator').remove();
+                debateMessages.innerHTML += `
+                    <div class="chat-message model">
+                        <div class="chat-bubble model debate-antagonist">${responseText.replace(/\n/g, '<br>')}</div>
+                    </div>`;
+            } catch (err) {
+                document.getElementById('debate-thinking-indicator').remove();
+                debateMessages.innerHTML += `
+                    <div class="chat-message model">
+                        <div class="chat-bubble model debate-antagonist text-red-400">I seem to have lost my train of thought. Please try your rebuttal again.</div>
+                    </div>`;
+            } finally {
+                debateSendBtn.disabled = false;
+                debateMessages.scrollTop = debateMessages.scrollHeight;
             }
         }
 
@@ -2613,6 +2923,9 @@
             const visualizeBtn = event.target.closest('.visualize-btn');
             const conceptConnectorBtn = event.target.closest('.concept-connector-btn');
             const careerRecommenderBtn = event.target.closest('#career-recommender-btn');
+            const debateBtn = event.target.closest('.debate-btn');
+            const offlineBtn = event.target.closest('#offline-centers-btn');
+            const backBtn = event.target.closest('#back-to-input-btn');
             
             if (suggestionCard) {
                 selectedSkill = suggestionCard.dataset.skillName;
@@ -2620,6 +2933,11 @@
                 const timePlanSection = document.getElementById('time-plan-section');
                 timePlanSection.classList.remove('hidden');
                 timePlanSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+             if (backBtn) {
+                resetUI();
                 return;
             }
             
@@ -2641,6 +2959,10 @@
 
             if (careerExplorerBtn) {
                 handleCareerExplorer(careerExplorerBtn.dataset.skillName);
+            }
+            
+            if (offlineBtn) {
+                handleOfflineCenterSearch(offlineBtn.dataset.skillName);
             }
 
             if (careerCard) {
@@ -2701,6 +3023,10 @@
 
             if(careerRecommenderBtn) {
                 handleCareerRecommender();
+            }
+
+            if(debateBtn) {
+                handleDebateTopic(debateBtn.dataset.skillName, debateBtn.dataset.weekTheme);
             }
         });
         
@@ -2928,5 +3254,4 @@
     </script>
 </body>
 </html>
-
 
