@@ -220,6 +220,10 @@
             background-color: var(--primary-glow);
         }
 
+        .toggle-resources-btn.open ion-icon {
+            transform: rotate(180deg);
+        }
+
         /* General Animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(30px); }
@@ -742,6 +746,8 @@
         const interestQuizBtn = document.getElementById('interest-quiz-btn');
 
         let selectedSkill = ''; // To store the skill name between steps
+        let selectedWeeks = '';
+        let selectedLevel = '';
         let chatHistory = []; // To store the AI coach conversation
         let debateHistory = []; // To store the debate conversation
         let roadmapData = null; // To store the current roadmap
@@ -974,6 +980,14 @@
                         <button class="time-plan-btn dynamic-button" data-weeks="10">10 Weeks</button>
                     </div>
                 </div>
+                <div id="level-selection-section" class="hidden animate-on-load glass-card p-6 md:p-8 mt-8">
+                    <h3 class="text-2xl font-bold text-center text-white mb-6" style="font-family: 'Space Grotesk', sans-serif;">Choose Your Skill Level</h3>
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <button class="level-btn dynamic-button" data-level="Beginner">Beginner</button>
+                        <button class="level-btn dynamic-button" data-level="Intermediate">Intermediate</button>
+                        <button class="level-btn dynamic-button" data-level="Expert">Expert</button>
+                    </div>
+                </div>
             `;
             
             resultsArea.innerHTML = suggestionsHtml;
@@ -983,27 +997,29 @@
          * Handles the request to generate a learning roadmap.
          * @param {string} skillName The name of the skill.
          * @param {string} weeks The duration of the roadmap in weeks.
+         * @param {string} level The difficulty level of the roadmap.
          */
-        async function handleGetRoadmap(skillName, weeks) {
+        async function handleGetRoadmap(skillName, weeks, level) {
             clearError();
             document.getElementById('input-section').classList.add('hidden');
             const learningStyle = document.querySelector('input[name="learning-style"]:checked').value;
-            showLoader(`Building your ${weeks}-week roadmap for a ${learningStyle} learner...`);
+            showLoader(`Building your ${weeks}-week ${level} roadmap for a ${learningStyle} learner...`);
             
-            const prompt = `Create a comprehensive learning guide for a beginner learning "${skillName}". The guide should be structured for a duration of ${weeks} weeks.
+            const prompt = `Create a comprehensive learning guide for a '${level}' learner for the skill "${skillName}". The guide should be structured for a duration of ${weeks} weeks.
             Crucially, tailor the weekly goals and suggested resources to fit a '${learningStyle}' learning preference. For example, for a 'Visual' learner, prioritize video tutorials and diagrams. For a 'Practical' learner, suggest more coding exercises and mini-projects. For a 'Theoretical' learner, focus on documentation and articles.
             Provide the following in a JSON object:
             1. 'skill': The name of the skill, which is "${skillName}".
             2. 'roadmap': A ${weeks}-week learning plan as an array of objects. Each object should represent a week and have: 'week' (number), 'theme' (string), 'goals' (an array of 3-4 specific string goals tailored to the learning style), and 'resources' (an array of 2-3 objects, where each object has a 'title' and a 'searchQuery' which is a concise Google search term to find a tutorial for that goal, also tailored to the learning style).
             3. 'freePlatforms': An array of 2-3 objects, each representing a free learning platform. Each object needs a 'name', 'description', and a 'searchQuery' which is a concise Google search term to find a high-quality course for "${skillName}" on that platform.
-            4. 'paidPlatforms': An array of 2-3 objects, each representing a paid learning platform. Each object needs a 'name', 'description', and a 'searchQuery' which is a concise Google search term to find a high-quality course for "${skillName}" on that platform.`;
+            4. 'paidPlatforms': An array of 2-3 objects, each representing a paid learning platform. Each object needs a 'name', 'description', and a 'searchQuery' which is a concise Google search term to find a high-quality course for "${skillName}" on that platform.
+            5. 'books': An array of 2-3 objects, each representing a highly-rated book (or e-book) for learning "${skillName}". Each object needs a 'name', 'description' (e.g., "A foundational text covering core concepts..."), and a 'searchQuery' (a concise Google search term to find the book, e.g., "'Book Title' by Author").`;
             
             const platformSchema = { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, description: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["name", "description", "searchQuery"] } };
             const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { skill: { type: "STRING" }, roadmap: { type: "ARRAY", items: { type: "OBJECT", properties: { week: { type: "NUMBER" }, theme: { type: "STRING" }, goals: { type: "ARRAY", items: { type: "STRING" } }, resources: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["title", "searchQuery"] } } }, required: ["week", "theme", "goals", "resources"] } }, freePlatforms: platformSchema, paidPlatforms: platformSchema }, required: ["skill", "roadmap", "freePlatforms", "paidPlatforms"] }
+                    responseSchema: { type: "OBJECT", properties: { skill: { type: "STRING" }, roadmap: { type: "ARRAY", items: { type: "OBJECT", properties: { week: { type: "NUMBER" }, theme: { type: "STRING" }, goals: { type: "ARRAY", items: { type: "STRING" } }, resources: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["title", "searchQuery"] } } }, required: ["week", "theme", "goals", "resources"] } }, freePlatforms: platformSchema, paidPlatforms: platformSchema, books: platformSchema }, required: ["skill", "roadmap", "freePlatforms", "paidPlatforms", "books"] }
                 }
             };
             try {
@@ -1093,8 +1109,11 @@
                                 </ul>
                             </div>
                             <div class="mt-4">
-                                <h4 class="font-semibold text-gray-300 mb-2">Suggested Resources:</h4>
-                                <ul class="space-y-2">
+                                <button class="toggle-resources-btn flex justify-between items-center w-full text-left font-semibold text-gray-300 mb-2 p-2 rounded-lg hover:bg-gray-800/50 transition-colors">
+                                    <span>Suggested Resources:</span>
+                                    <ion-icon name="chevron-down-outline" class="transition-transform duration-300 text-xl"></ion-icon>
+                                </button>
+                                <ul class="resource-list hidden space-y-2">
                                     ${week.resources.map(resource => `
                                     <li>
                                         <a href="https://www.google.com/search?q=${encodeURIComponent(resource.searchQuery)}" target="_blank" rel="noopener noreferrer" class="flex items-center p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 border border-gray-700 hover:border-blue-400 transition-all duration-200">
@@ -1114,6 +1133,9 @@
                  <div id="job-trend-section" class="mt-12 border-t border-gray-700 pt-8 text-center animate-on-load">
                      <h3 class="text-2xl font-bold text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Future Job Outlook</h3>
                      <div class="h-64 md:h-80"><canvas id="jobTrendChart"></canvas></div>
+                     <div class="mt-6">
+                        <button id="timeline-tracker-btn" class="dynamic-button ai-feature-btn">📅 Timeline Tracker</button>
+                     </div>
                  </div>
             `;
             
@@ -1138,6 +1160,7 @@
                                             </a>`).join('')}
                                         </div></div>`;
             }
+
             if(data.paidPlatforms && data.paidPlatforms.length > 0) {
                 roadmapHtml += `<div class="animate-on-load" style="animation-delay: ${data.roadmap.length * 200 + 100}ms;">
                                         <h3 class="text-2xl font-bold text-center text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Premium Platforms</h3>
@@ -1148,11 +1171,21 @@
                                             </a>`).join('')}
                                         </div></div>`;
             }
+            if(data.books && data.books.length > 0) {
+                roadmapHtml += `<div class="mt-8 animate-on-load" style="animation-delay: ${data.roadmap.length * 200 + 250}ms;">
+                                        <h3 class="text-2xl font-bold text-center text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">E-books & Best Books</h3>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${data.books.map(b => `
+                                            <a href="https://www.google.com/search?q=${encodeURIComponent(b.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-amber-900/30 rounded-lg border border-amber-700 hover:bg-amber-800/50 hover:border-amber-500 transition">
+                                                <h4 class="font-bold text-amber-300">${b.name}</h4>
+                                                <p class="text-sm text-amber-400 mt-1">${b.description}</p>
+                                            </a>`).join('')}
+                                        </div></div>`;
+            }
             roadmapHtml += `</div>`;
             
             // Career Path Explorer Section
             roadmapHtml += `
-                <div id="career-explorer-section" class="mt-12 border-t border-gray-700 pt-8 text-center animate-on-load" style="animation-delay: ${data.roadmap.length * 200 + 200}ms;">
+                <div id="career-explorer-section" class="mt-12 border-t border-gray-700 pt-8 text-center animate-on-load" style="animation-delay: ${data.roadmap.length * 200 + 350}ms;">
                     <h3 class="text-2xl font-bold text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Connect Your Skill to a Career</h3>
                     <button id="career-explorer-btn" data-skill-name="${data.skill}" class="dynamic-button">✨ Explore Career Paths</button>
                     <div id="career-results" class="mt-6 text-left"></div>
@@ -1163,9 +1196,10 @@
             roadmapHtml += `</div>`;
             resultsArea.innerHTML = roadmapHtml;
             fetchAndDisplayToughness(data.skill);
+            // Use a timeout to ensure the canvas element is in the DOM before rendering the chart
             setTimeout(() => {
                 renderJobTrendGraph(data.skill);
-            }, 10);
+            }, 100);
 
             // Show the AI Coach FAB
             aiCoachFab.dataset.skillName = data.skill;
@@ -2765,6 +2799,111 @@
             }
         }
 
+        // --- NEW: Timeline Tracker Functions ---
+        
+        /**
+         * Fetches and displays a timeline of important academic/career dates.
+         */
+        async function handleTimelineTracker() {
+            showLoader(`Generating your personalized timeline...`, featureModalContent);
+            featureModalOverlay.classList.add('visible');
+
+            const pursuingClass = document.querySelector('input[name="pursuing-class"]:checked')?.value || 'Graduation';
+            const stream = document.querySelector('input[name="stream"]:checked')?.value || 'General';
+
+            const prompt = `You are an academic advisor AI. A user in India who is in '${pursuingClass}' with a focus on the '${stream}' stream is learning about '${selectedSkill}'. Based on the current date being September 7, 2025, generate a timeline of important upcoming academic and career-related events for them for the next 6-8 months. Include application deadlines for top entrance exams, university admissions, popular scholarships, and counseling schedules relevant to their field and level in India.
+
+            Return a JSON object with a 'timelineEvents' array. Each object in the array should have:
+            1. 'eventName': The name of the event (e.g., "JEE Main 2026 Session 1 Application").
+            2. 'eventType': The category (e.g., "Entrance Exam", "Admission", "Scholarship", "Counseling").
+            3. 'estimatedDate': A likely date or date range for the event (e.g., "November 2025", "Jan 15, 2026").
+            4. 'description': A brief 1-sentence description of the event.`;
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            timelineEvents: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        eventName: { type: "STRING" },
+                                        eventType: { type: "STRING" },
+                                        estimatedDate: { type: "STRING" },
+                                        description: { type: "STRING" }
+                                    },
+                                    required: ["eventName", "eventType", "estimatedDate", "description"]
+                                }
+                            }
+                        },
+                        required: ["timelineEvents"]
+                    }
+                }
+            };
+
+            try {
+                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                displayTimelineTracker(data.timelineEvents);
+            } catch (err) {
+                featureModalContent.innerHTML = `<p class="text-red-400">Could not generate the timeline. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
+            }
+        }
+
+        /**
+         * Renders the timeline tracker in the modal.
+         * @param {Array<object>} events The array of timeline events.
+         */
+        function displayTimelineTracker(events) {
+            const groupedEvents = events.reduce((acc, event) => {
+                const { eventType } = event;
+                if (!acc[eventType]) {
+                    acc[eventType] = [];
+                }
+                acc[eventType].push(event);
+                return acc;
+            }, {});
+
+            let timelineHtml = `
+                <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">📅 Your Academic Timeline</h2>
+                <div class="space-y-6">
+            `;
+            
+            for (const eventType in groupedEvents) {
+                timelineHtml += `
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-3 border-b-2 border-blue-400 pb-1">${eventType}</h3>
+                        <ul class="space-y-3">
+                `;
+                groupedEvents[eventType].forEach(event => {
+                    timelineHtml += `
+                        <li class="p-3 bg-gray-900/50 rounded-lg">
+                            <p class="font-semibold text-gray-300">${event.eventName}</p>
+                            <p class="text-sm text-blue-400 font-medium">${event.estimatedDate}</p>
+                            <p class="text-xs text-gray-400 mt-1">${event.description}</p>
+                        </li>
+                    `;
+                });
+                timelineHtml += `</ul></div>`;
+            }
+            const searchQuery = `${selectedSkill} ${document.querySelector('input[name="pursuing-class"]:checked')?.value} important dates official website`;
+            timelineHtml += `
+                </div>
+                <div class="text-center mt-8">
+                     <a href="https://www.google.com/search?q=${encodeURIComponent(searchQuery)}" target="_blank" rel="noopener noreferrer" class="dynamic-button">
+                        Find Official Dates & More Info
+                    </a>
+                </div>
+                <div class="text-center mt-6">
+                    <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                </div>
+            `;
+            featureModalContent.innerHTML = timelineHtml;
+        }
+
 
         // --- NEW: Debate Feature Functions ---
 
@@ -2905,6 +3044,7 @@
         resultsArea.addEventListener('click', (event) => {
             const suggestionCard = event.target.closest('.suggestion-card');
             const timePlanBtn = event.target.closest('.time-plan-btn');
+            const levelBtn = event.target.closest('.level-btn');
             const startOverBtn = event.target.closest('#start-over-btn');
             const deepDiveBtn = event.target.closest('#deep-dive-btn');
             const careerExplorerBtn = event.target.closest('#career-explorer-btn');
@@ -2926,6 +3066,8 @@
             const debateBtn = event.target.closest('.debate-btn');
             const offlineBtn = event.target.closest('#offline-centers-btn');
             const backBtn = event.target.closest('#back-to-input-btn');
+            const toggleBtn = event.target.closest('.toggle-resources-btn');
+            const timelineBtn = event.target.closest('#timeline-tracker-btn');
             
             if (suggestionCard) {
                 selectedSkill = suggestionCard.dataset.skillName;
@@ -2942,10 +3084,33 @@
             }
             
             if (timePlanBtn) {
-                const weeks = timePlanBtn.dataset.weeks;
-                if (selectedSkill && weeks) {
-                    handleGetRoadmap(selectedSkill, weeks);
+                selectedWeeks = timePlanBtn.dataset.weeks;
+                document.getElementById('time-plan-section').classList.add('hidden');
+                const levelSection = document.getElementById('level-selection-section');
+                levelSection.classList.remove('hidden');
+                levelSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            
+            if (levelBtn) {
+                selectedLevel = levelBtn.dataset.level;
+                if (selectedSkill && selectedWeeks && selectedLevel) {
+                    handleGetRoadmap(selectedSkill, selectedWeeks, selectedLevel);
                 }
+                return;
+            }
+
+            if (toggleBtn) {
+                toggleBtn.classList.toggle('open');
+                const resourceList = toggleBtn.nextElementSibling;
+                if (resourceList && resourceList.classList.contains('resource-list')) {
+                    resourceList.classList.toggle('hidden');
+                }
+                return;
+            }
+
+            if (timelineBtn) {
+                handleTimelineTracker();
                 return;
             }
 
@@ -3254,4 +3419,5 @@
     </script>
 </body>
 </html>
+
 
