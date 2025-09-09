@@ -497,7 +497,7 @@
                         <label for="interests-input" class="block text-sm font-medium text-gray-300 mb-2">My Interests</label>
                         <input id="interests-input" type="text" placeholder="e.g., video games, ancient history" class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition text-white placeholder-gray-500"/>
                         <div class="mt-2 text-xs text-gray-500 h-4">e.g., <span id="interests-example" class="transition-opacity duration-500 ease-in-out"></span></div>
-                         <button id="interest-quiz-btn" class="dynamic-button secondary-button !text-xs !px-4 !py-2 mt-2">Stuck? Take a quiz to find your interests!</button>
+                           <button id="interest-quiz-btn" class="dynamic-button secondary-button !text-xs !px-4 !py-2 mt-2">Stuck? Take a quiz to find your interests!</button>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -516,7 +516,7 @@
                         <label for="style-theoretical" class="learning-style-label">Theoretical (Reading)</label>
                     </div>
                     <div class="text-center mt-3">
-                         <button id="learning-style-analyzer-btn" class="dynamic-button secondary-button !text-xs !px-4 !py-2">Not sure? Analyze My Style!</button>
+                        <button id="learning-style-analyzer-btn" class="dynamic-button secondary-button !text-xs !px-4 !py-2">Not sure? Analyze My Style!</button>
                     </div>
                 </div>
 
@@ -537,10 +537,10 @@
 
                 <!-- UPDATED CONDITIONAL SECTION FOR STREAM -->
                 <div id="stream-selection-section" class="mt-6">
-                     <label class="block text-sm font-medium text-gray-300 mb-3 text-center">My Field / Stream</label>
-                     <div id="stream-selector" class="flex flex-wrap justify-center gap-3">
-                         <!-- Stream options will be populated by JS -->
-                     </div>
+                       <label class="block text-sm font-medium text-gray-300 mb-3 text-center">My Field / Stream</label>
+                       <div id="stream-selector" class="flex flex-wrap justify-center gap-3">
+                           <!-- Stream options will be populated by JS -->
+                       </div>
                 </div>
 
                 <div class="mt-8 text-center">
@@ -573,27 +573,27 @@
     <!-- AI Coach Chat Modal Structure -->
     <div id="ai-coach-chat-modal-overlay" class="modal-overlay">
         <div id="ai-coach-chat-modal-content" class="modal-content glass-card p-0">
-             <div class="p-4 border-b border-gray-700 flex justify-between items-center">
-                 <h2 id="chat-header" class="text-xl font-bold text-white text-center" style="font-family: 'Orbitron', sans-serif;">AI Learning Coach</h2>
-                 <button id="close-chat-btn" class="text-gray-400 hover:text-white transition-colors">
-                     <ion-icon name="close-circle-outline" class="text-2xl"></ion-icon>
-                 </button>
-             </div>
-             <div id="chat-messages" class="flex-grow p-4 overflow-y-auto">
-                 <!-- Chat messages will be injected here -->
-             </div>
-             <div class="p-4 border-t border-gray-700">
-                 <form id="chat-form" class="flex gap-2">
-                     <input id="chat-input" type="text" placeholder="Ask a question..." class="flex-grow px-4 py-2 bg-gray-800/50 border border-gray-600 rounded-full focus:ring-2 focus:ring-blue-400 focus:border-transparent transition text-white placeholder-gray-500" autocomplete="off">
-                     <button type="submit" id="chat-send-btn" class="dynamic-button !p-3 !rounded-full flex items-center justify-center">
-                         <ion-icon name="send-outline" class="text-xl"></ion-icon>
-                     </button>
-                 </form>
-             </div>
+               <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                   <h2 id="chat-header" class="text-xl font-bold text-white text-center" style="font-family: 'Orbitron', sans-serif;">AI Learning Coach</h2>
+                   <button id="close-chat-btn" class="text-gray-400 hover:text-white transition-colors">
+                       <ion-icon name="close-circle-outline" class="text-2xl"></ion-icon>
+                   </button>
+               </div>
+               <div id="chat-messages" class="flex-grow p-4 overflow-y-auto">
+                   <!-- Chat messages will be injected here -->
+               </div>
+               <div class="p-4 border-t border-gray-700">
+                   <form id="chat-form" class="flex gap-2">
+                       <input id="chat-input" type="text" placeholder="Ask a question..." class="flex-grow px-4 py-2 bg-gray-800/50 border border-gray-600 rounded-full focus:ring-2 focus:ring-blue-400 focus:border-transparent transition text-white placeholder-gray-500" autocomplete="off">
+                       <button type="submit" id="chat-send-btn" class="dynamic-button !p-3 !rounded-full flex items-center justify-center">
+                           <ion-icon name="send-outline" class="text-xl"></ion-icon>
+                       </button>
+                   </form>
+               </div>
         </div>
     </div>
 
-     <!-- DEBATE MODAL -->
+      <!-- DEBATE MODAL -->
     <div id="debate-modal-overlay" class="modal-overlay">
         <div id="debate-modal-content" class="modal-content glass-card p-0">
             <!-- Debate content injected by JS -->
@@ -644,7 +644,7 @@
 
             function updateStreamOptions(selectedClass) {
                 streamSelectionSection.classList.remove('hidden');
-                 if (selectedClass === 'Class 12') {
+                if (selectedClass === 'Class 12') {
                     streamSelector.innerHTML = `
                         <input type="radio" id="stream-science" name="stream" value="Science" class="hidden learning-style-radio" checked>
                         <label for="stream-science" class="learning-style-label">Science</label>
@@ -661,7 +661,7 @@
                         <label for="stream-general" class="learning-style-label">General</label>
                     `;
                 } else { // Graduation
-                     streamSelector.innerHTML = `
+                        streamSelector.innerHTML = `
                         <input type="radio" id="stream-eng" name="stream" value="Engineering" class="hidden learning-style-radio" checked>
                         <label for="stream-eng" class="learning-style-label">Engineering</label>
                         <input type="radio" id="stream-sci" name="stream" value="Science" class="hidden learning-style-radio">
@@ -670,7 +670,7 @@
                         <label for="stream-com" class="learning-style-label">Commerce</label>
                         <input type="radio" id="stream-art" name="stream" value="Arts" class="hidden learning-style-radio">
                         <label for="stream-art" class="learning-style-label">Arts</label>
-                         <input type="radio" id="stream-med" name="stream" value="Medical" class="hidden learning-style-radio">
+                           <input type="radio" id="stream-med" name="stream" value="Medical" class="hidden learning-style-radio">
                         <label for="stream-med" class="learning-style-label">Medical</label>
                     `;
                 }
@@ -761,9 +761,7 @@
         let currentStyleAnalyzerQuestionIndex = 0;
         let jobTrendChart = null; // To hold the chart instance
 
-        // **SECURITY FIX**: The API key is set to an empty string.
-        // Hardcoding keys in client-side code is a security risk.
-        // The execution environment will automatically provide a valid key.
+        // The API key is set to an empty string. The execution environment will automatically provide a valid key.
         const apiKey = "AIzaSyDnXwgMV51Nt6m-uCAdPuvVblh61VbJHwQ";
 
         /**
@@ -814,7 +812,7 @@
             getSuggestionsBtn.disabled = false;
             getSuggestionsBtn.textContent = 'Discover My Path';
             aiCoachFab.classList.remove('visible');
-             if (jobTrendChart) {
+            if (jobTrendChart) {
                 jobTrendChart.destroy();
                 jobTrendChart = null;
             }
@@ -831,9 +829,9 @@
         async function fetchFromApi(model, payload, isJson = true, retryCount = 0) {
             let apiUrl;
             if (model.startsWith('imagen')) {
-                 apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
             } else {
-                 apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
             }
             
             try {
@@ -863,10 +861,10 @@
                         }
                         return rawText.replace(/^```markdown\s*|```$/g, '');
                     } else if (part.inlineData && part.inlineData.mimeType.startsWith("audio/")) {
-                         return {
-                            audioData: part.inlineData.data,
-                            mimeType: part.inlineData.mimeType
-                         };
+                            return {
+                                audioData: part.inlineData.data,
+                                mimeType: part.inlineData.mimeType
+                             };
                     }
                 }
 
@@ -917,10 +915,11 @@
             getSuggestionsBtn.innerHTML = '<div class="w-5 h-5 border-2 border-white border-dashed rounded-full animate-spin mx-auto"></div>';
             showLoader("Analyzing your profile...");
             
-            const prompt = `Based on ${userContext}, with skills in '${skills}' and interests in '${interests}', suggest 6 unique and interesting new skills they could learn. For each suggestion, provide a 'name' (the skill) and a short, compelling 'description' (1-2 sentences) explaining why it's a good fit.`;
+            const prompt = `Based on ${userContext}, with existing skills in '${skills}' and strong interests in '${interests}', suggest 6 unique and interesting new skills. Each suggestion must directly synthesize the provided skills and interests. For each suggestion, provide a 'name' (the skill) and a short, compelling 'description' (1-2 sentences) explaining why it's a perfect fit for a user with those skills and interests.`;
             
             const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: "You are an expert learning navigator. Your suggestions should be creative, relevant, and directly connect the user's existing skills and interests to a new learning path." }] },
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: { type: "OBJECT", properties: { suggestions: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, description: { type: "STRING" } }, required: ["name", "description"] } } }, required: ["suggestions"] }
@@ -1038,17 +1037,17 @@
         function displayRoadmap(data) {
             let roadmapHtml = `
                 <div id="roadmap-container" class="glass-card p-6 md:p-8 animate-on-load">
-                     <div class="relative flex justify-center items-center mb-4">
-                         <button id="back-to-input-btn" class="absolute left-0 dynamic-button secondary-button !px-3 !py-2 inline-flex items-center">
-                             <ion-icon name="arrow-back-outline" class="text-xl"></ion-icon>
-                         </button>
-                         <div class="flex justify-center items-center gap-4">
-                             <h2 class="text-2xl md:text-3xl font-bold text-white text-center" style="font-family: 'Space Grotesk', sans-serif;">
-                                 Roadmap to: <span style="background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${data.skill}</span>
-                             </h2>
-                             <button id="narrate-roadmap-btn" class="dynamic-button !p-3 !rounded-full" title="Listen to Summary">🎧</button>
-                         </div>
-                     </div>
+                    <div class="relative flex justify-center items-center mb-4">
+                        <button id="back-to-input-btn" class="absolute left-0 dynamic-button secondary-button !px-3 !py-2 inline-flex items-center">
+                            <ion-icon name="arrow-back-outline" class="text-xl"></ion-icon>
+                        </button>
+                        <div class="flex justify-center items-center gap-4">
+                            <h2 class="text-2xl md:text-3xl font-bold text-white text-center" style="font-family: 'Space Grotesk', sans-serif;">
+                                Roadmap to: <span style="background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${data.skill}</span>
+                            </h2>
+                            <button id="narrate-roadmap-btn" class="dynamic-button !p-3 !rounded-full" title="Listen to Summary">🎧</button>
+                        </div>
+                    </div>
                     <div class="text-center">
                         <div id="toughness-display" class="mt-4 text-center"></div>
                         <p class="text-center text-gray-400 my-4">Your ${data.roadmap.length}-week journey starts now.</p>
@@ -1057,11 +1056,11 @@
                     <div class="glass-card p-6 my-8">
                         <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Top AI Features</h2>
                         <div class="flex flex-wrap justify-center items-center gap-4">
-                              <button id="setup-guide-btn" class="dynamic-button ai-feature-btn">🚀 Setup Guide</button>
-                              <button id="deep-dive-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">✨ Deep Dive</button>
-                              <button id="suggest-project-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">💡 Personalized Projects</button>
-                              <button id="study-plan-btn" class="dynamic-button ai-feature-btn">🗓️ Plan a Study Session</button>
-                              <button id="career-recommender-btn" class="dynamic-button ai-feature-btn">🧭 Recommend a Career</button>
+                             <button id="setup-guide-btn" class="dynamic-button ai-feature-btn">🚀 Setup Guide</button>
+                             <button id="deep-dive-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">✨ Deep Dive</button>
+                             <button id="suggest-project-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">💡 Personalized Projects</button>
+                             <button id="study-plan-btn" class="dynamic-button ai-feature-btn">🗓️ Plan a Study Session</button>
+                             <button id="career-recommender-btn" class="dynamic-button ai-feature-btn">🧭 Recommend a Career</button>
                         </div>
                     </div>
 
@@ -1092,14 +1091,14 @@
                             <div class="glass-card p-4 my-4 rounded-xl">
                                 <h4 class="font-semibold text-center text-white mb-3" style="font-family: 'Orbitron', sans-serif;">✨ AI Learning Toolkit ✨</h4>
                                 <div class="flex flex-wrap gap-2 justify-center">
-                                    <button class="eli5-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">👶 ELI5</button>
-                                    <button class="scenario-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">💼 Real-World Scenario</button>
-                                    <button class="im-stuck-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🆘 I'm Stuck!</button>
-                                    <button class="quiz-me-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🧠 Quiz Me</button>
-                                    <button class="flashcard-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🃏 Flashcards</button>
-                                    <button class="visualize-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🎨 Visualize</button>
-                                    <button class="concept-connector-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🔗 Link Concepts</button>
-                                    <button class="debate-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">⚔️ Debate Topic</button>
+                                     <button class="eli5-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">👶 ELI5</button>
+                                     <button class="scenario-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">💼 Real-World Scenario</button>
+                                     <button class="im-stuck-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🆘 I'm Stuck!</button>
+                                     <button class="quiz-me-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🧠 Quiz Me</button>
+                                     <button class="flashcard-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🃏 Flashcards</button>
+                                     <button class="visualize-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🎨 Visualize</button>
+                                     <button class="concept-connector-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🔗 Link Concepts</button>
+                                     <button class="debate-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">⚔️ Debate Topic</button>
                                 </div>
                             </div>
                             <div class="mt-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
@@ -1130,13 +1129,13 @@
             
             // New Job Trend Graph Section
             roadmapHtml += `
-                 <div id="job-trend-section" class="mt-12 border-t border-gray-700 pt-8 text-center animate-on-load">
-                     <h3 class="text-2xl font-bold text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Future Job Outlook</h3>
-                     <div class="h-64 md:h-80"><canvas id="jobTrendChart"></canvas></div>
-                     <div class="mt-6">
-                        <button id="timeline-tracker-btn" class="dynamic-button ai-feature-btn">📅 Timeline Tracker</button>
-                     </div>
-                 </div>
+                    <div id="job-trend-section" class="mt-12 border-t border-gray-700 pt-8 text-center animate-on-load">
+                        <h3 class="text-2xl font-bold text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Future Job Outlook</h3>
+                        <div class="h-64 md:h-80"><canvas id="jobTrendChart"></canvas></div>
+                        <div class="mt-6">
+                            <button id="timeline-tracker-btn" class="dynamic-button ai-feature-btn">📅 Timeline Tracker</button>
+                        </div>
+                    </div>
             `;
             
             // New Offline Centers Section
@@ -1255,7 +1254,7 @@
             }
 
             const prompt = `Analyze the job market trend for the skill "${skillName}". Is the demand expected to be in high growth, moderate growth, stable, or declining over the next 8 years? Also, provide a realistic but fictional base number of job openings (as a single number, e.g., 45000) for 4 years ago to start a chart from. Return a JSON object with 'trend' (string: "high growth", "moderate growth", "stable", or "declining") and 'base_jobs' (number).`;
-             const payload = {
+              const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
@@ -1367,8 +1366,8 @@
                  generationConfig: {
                      responseMimeType: "application/json",
                      responseSchema: { type: "OBJECT", properties: { what_is_it: { type: "STRING" }, why_useful: { type: "STRING" }, why_learn: { type: "STRING" } }, required: ["what_is_it", "why_useful", "why_learn"] }
-                 }
-              };
+                   }
+             };
 
             try {
                 const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
@@ -1503,7 +1502,7 @@
                         </div>
                     </div>
                     <div id="interview-prep-area" class="mt-8 text-center">
-                         <button id="mock-interview-btn" data-skill-name="${selectedSkill}" data-career-title="${careerTitle}" class="dynamic-button secondary-button">✨ Start Mock Interview</button>
+                           <button id="mock-interview-btn" data-skill-name="${selectedSkill}" data-career-title="${careerTitle}" class="dynamic-button secondary-button">✨ Start Mock Interview</button>
                     </div>
                     <div class="text-center mt-6">
                         <button class="close-modal-btn dynamic-button secondary-button">Close</button>
@@ -1524,7 +1523,7 @@
 
             const userInterests = interestsInput.value.trim();
             const prompt = `A user is learning '${skillName}' and is interested in '${userInterests}'. Generate 3 unique, beginner-friendly project ideas that combine the skill with their interests. For each, provide a "title" and a one-sentence "description".`;
-             const payload = {
+              const payload = {
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
@@ -2258,13 +2257,13 @@
                     audio.play();
 
                     featureModalContent.innerHTML = `
-                         <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
-                         <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
-                             <p class="text-gray-300">${summaryText}</p>
-                         </div>
-                          <div class="text-center mt-6">
-                              <button class="close-modal-btn dynamic-button secondary-button">Close</button>
-                          </div>
+                           <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
+                           <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
+                               <p class="text-gray-300">${summaryText}</p>
+                           </div>
+                           <div class="text-center mt-6">
+                               <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                           </div>
                     `;
                     featureModalOverlay.classList.add('visible');
                 } else {
@@ -2615,98 +2614,6 @@
             }
         }
 
-        function handleLearningStyleAnalyzer() {
-            styleAnalyzerAnswers = [];
-            currentStyleAnalyzerQuestionIndex = 0;
-            styleAnalyzerQuestions = [
-                {
-                    question: "When you are learning something new, you prefer to:",
-                    options: [
-                        { text: "Watch a video or look at diagrams.", style: "Visual" },
-                        { text: "Jump in and try it yourself.", style: "Practical" },
-                        { text: "Read a book or an article about it.", style: "Theoretical" },
-                        { text: "A mix of all of the above.", style: "Balanced" }
-                    ]
-                },
-                {
-                    question: "When you solve a problem, you are more likely to:",
-                    options: [
-                        { text: "Draw a flowchart or diagram to visualize the steps.", style: "Visual" },
-                        { text: "Build a prototype or experiment with solutions.", style: "Practical" },
-                        { text: "Write down the principles and logic first.", style: "Theoretical" },
-                        { text: "Discuss different approaches with others.", style: "Balanced" }
-                    ]
-                },
-                {
-                     question: "After learning a new topic, what helps you remember it best?",
-                      options: [
-                         { text: "Seeing a real-world example in action.", style: "Visual" },
-                         { text: "Applying it to a personal project.", style: "Practical" },
-                         { text: "Summarizing the key theories in your own words.", style: "Theoretical" },
-                         { text: "Explaining it to someone else.", style: "Balanced" }
-                    ]
-                }
-            ];
-
-            displayCurrentStyleAnalyzerQuestion();
-            featureModalOverlay.classList.add('visible');
-        }
-
-        function displayCurrentStyleAnalyzerQuestion() {
-            const questionData = styleAnalyzerQuestions[currentStyleAnalyzerQuestionIndex];
-             let html = `
-                <h2 class="text-2xl font-bold text-white mb-2 text-center" style="font-family: 'Orbitron', sans-serif;">Learning Style Analyzer</h2>
-                <p class="text-center text-gray-400 mb-6">Question ${currentStyleAnalyzerQuestionIndex + 1} of ${styleAnalyzerQuestions.length}</p>
-                <div id="analyzer-question-area">
-                     <p class="font-semibold mb-3">${questionData.question}</p>
-                     <div class="quiz-options">
-                         ${questionData.options.map(opt => `<button class="quiz-option w-full text-left analyzer-option" data-style="${opt.style}">${opt.text}</button>`).join('')}
-                     </div>
-                </div>
-                <div id="analyzer-result-area" class="mt-4"></div>
-                 <div class="text-center mt-6">
-                     <button class="close-modal-btn dynamic-button secondary-button">Close</button>
-                 </div>
-            `;
-            featureModalContent.innerHTML = html;
-        }
-
-        function analyzeStyleQuizAnswers() {
-            const styleCounts = { Visual: 0, Practical: 0, Theoretical: 0 };
-            styleAnalyzerAnswers.forEach(answer => {
-                if (answer in styleCounts) {
-                    styleCounts[answer]++;
-                } else { // Balanced
-                    styleCounts.Visual++;
-                    styleCounts.Practical++;
-                    styleCounts.Theoretical++;
-                }
-            });
-
-            let dominantStyle = "Balanced";
-            let maxCount = 0;
-            for (const style in styleCounts) {
-                if (styleCounts[style] > maxCount) {
-                    maxCount = styleCounts[style];
-                    dominantStyle = style;
-                }
-            }
-             // Check for a tie
-            const topStyles = Object.keys(styleCounts).filter(style => styleCounts[style] === maxCount);
-            if (topStyles.length > 1) {
-                dominantStyle = "Balanced";
-            }
-
-
-            const resultArea = document.getElementById('analyzer-result-area');
-            resultArea.innerHTML = `
-                <div class="p-4 bg-gray-900/50 border border-teal-500 rounded-lg text-center">
-                    <p class="text-gray-300">Based on your answers, your learning style seems to be predominantly <strong class="text-teal-300">${dominantStyle}</strong>. I've updated the selection on the main page for you!</p>
-                </div>
-            `;
-            document.getElementById(`style-${dominantStyle.toLowerCase()}`).checked = true;
-        }
-
         async function handleCareerRecommender() {
             showLoader(`Recommending a career path...`, featureModalContent);
             featureModalOverlay.classList.add('visible');
@@ -2741,16 +2648,16 @@
                 let html = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Career Recommendation</h2>
                     <div class="p-4 bg-gray-900/50 border border-amber-500 rounded-lg">
-                         <h3 class="text-xl font-bold text-amber-300">${data.career_title}</h3>
-                         <p class="text-gray-300 mt-2 mb-4">${data.reason}</p>
-                         <h4 class="font-bold text-lg text-white mb-2">Your Next Steps:</h4>
-                         <ul class="list-disc list-inside space-y-1 text-gray-400">
-                             ${data.next_steps.map(step => `<li>${step}</li>`).join('')}
-                         </ul>
+                        <h3 class="text-xl font-bold text-amber-300">${data.career_title}</h3>
+                        <p class="text-gray-300 mt-2 mb-4">${data.reason}</p>
+                        <h4 class="font-bold text-lg text-white mb-2">Your Next Steps:</h4>
+                        <ul class="list-disc list-inside space-y-1 text-gray-400">
+                            ${data.next_steps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
                     </div>
-                     <div class="text-center mt-6">
-                         <button class="close-modal-btn dynamic-button secondary-button">Close</button>
-                     </div>
+                    <div class="text-center mt-6">
+                        <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                    </div>
                 `;
                 featureModalContent.innerHTML = html;
             } catch (err) {
@@ -2893,7 +2800,7 @@
             timelineHtml += `
                 </div>
                 <div class="text-center mt-8">
-                     <a href="https://www.google.com/search?q=${encodeURIComponent(searchQuery)}" target="_blank" rel="noopener noreferrer" class="dynamic-button">
+                    <a href="https://www.google.com/search?q=${encodeURIComponent(searchQuery)}" target="_blank" rel="noopener noreferrer" class="dynamic-button">
                         Find Official Dates & More Info
                     </a>
                 </div>
@@ -3078,7 +2985,7 @@
                 return;
             }
 
-             if (backBtn) {
+              if (backBtn) {
                 resetUI();
                 return;
             }
@@ -3419,5 +3326,3 @@
     </script>
 </body>
 </html>
-
-
