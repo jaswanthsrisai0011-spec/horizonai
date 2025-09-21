@@ -440,7 +440,6 @@
             transform: rotateY(180deg);
             font-size: 0.875rem;
         }
-
     </style>
 </head>
 <body class="text-gray-200">
@@ -473,7 +472,6 @@
     <div id="background-animation"></div>
 
     <div class="container mx-auto p-4 md:p-8 max-w-4xl min-h-screen relative z-10">
-
         <!-- Header Section -->
         <header class="text-center p-6 mb-8 animate-on-load" style="animation-delay: 0.2s;">
             <h1 class="text-5xl md:text-6xl font-bold text-white" style="font-family: 'Space Grotesk', sans-serif; text-shadow: 0 0 15px rgba(255,255,255,0.3);">
@@ -497,7 +495,7 @@
                         <label for="interests-input" class="block text-sm font-medium text-gray-300 mb-2">My Interests</label>
                         <input id="interests-input" type="text" placeholder="e.g., video games, ancient history" class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition text-white placeholder-gray-500"/>
                         <div class="mt-2 text-xs text-gray-500 h-4">e.g., <span id="interests-example" class="transition-opacity duration-500 ease-in-out"></span></div>
-                           <button id="interest-quiz-btn" class="dynamic-button secondary-button !text-xs !px-4 !py-2 mt-2">Stuck? Take a quiz to find your interests!</button>
+                            <button id="interest-quiz-btn" class="dynamic-button secondary-button !text-xs !px-4 !py-2 mt-2">Stuck? Take a quiz to find your interests!</button>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -537,10 +535,10 @@
 
                 <!-- UPDATED CONDITIONAL SECTION FOR STREAM -->
                 <div id="stream-selection-section" class="mt-6">
-                       <label class="block text-sm font-medium text-gray-300 mb-3 text-center">My Field / Stream</label>
-                       <div id="stream-selector" class="flex flex-wrap justify-center gap-3">
-                           <!-- Stream options will be populated by JS -->
-                       </div>
+                        <label class="block text-sm font-medium text-gray-300 mb-3 text-center">My Field / Stream</label>
+                        <div id="stream-selector" class="flex flex-wrap justify-center gap-3">
+                            <!-- Stream options will be populated by JS -->
+                        </div>
                 </div>
 
                 <div class="mt-8 text-center">
@@ -607,6 +605,10 @@
 
 
     <script>
+        // Global API Keys
+        const geminiApiKey = "AIzaSyAr-LeVjL-d2NIareZuWDzemAdgMKF57Z0"; // Gemini API key
+        const newsApiKey = "pub_bf65ae57f1094bd0824f9ba2487685b4"; // Newsdata.io API key
+        
         document.addEventListener('DOMContentLoaded', () => {
             // --- Intro Animation Logic ---
             const introOverlay = document.getElementById('intro-overlay');
@@ -670,7 +672,7 @@
                         <label for="stream-com" class="learning-style-label">Commerce</label>
                         <input type="radio" id="stream-art" name="stream" value="Arts" class="hidden learning-style-radio">
                         <label for="stream-art" class="learning-style-label">Arts</label>
-                           <input type="radio" id="stream-med" name="stream" value="Medical" class="hidden learning-style-radio">
+                            <input type="radio" id="stream-med" name="stream" value="Medical" class="hidden learning-style-radio">
                         <label for="stream-med" class="learning-style-label">Medical</label>
                     `;
                 }
@@ -679,7 +681,7 @@
             pursuingSelector.addEventListener('change', (event) => {
                 updateStreamOptions(event.target.value);
             });
-
+            
             // Set initial state on load
             const initialClass = document.querySelector('input[name="pursuing-class"]:checked').value;
             updateStreamOptions(initialClass);
@@ -761,9 +763,6 @@
         let currentStyleAnalyzerQuestionIndex = 0;
         let jobTrendChart = null; // To hold the chart instance
 
-        // The API key is set to an empty string. The execution environment will automatically provide a valid key.
-        const apiKey = "AIzaSyDnXwgMV51Nt6m-uCAdPuvVblh61VbJHwQ";
-
         /**
          * Displays an error message to the user.
          * @param {string} message The error message to display.
@@ -829,9 +828,9 @@
         async function fetchFromApi(model, payload, isJson = true, retryCount = 0) {
             let apiUrl;
             if (model.startsWith('imagen')) {
-                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${geminiApiKey}`;
             } else {
-                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
             }
             
             try {
@@ -1052,7 +1051,11 @@
                         <div id="toughness-display" class="mt-4 text-center"></div>
                         <p class="text-center text-gray-400 my-4">Your ${data.roadmap.length}-week journey starts now.</p>
                     </div>
-
+                    <!-- NEW: Academic Suggestor Section -->
+                    <div id="academic-suggestor-section" class="hidden glass-card p-6 my-8">
+                        <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Next Academic Step</h2>
+                        <div id="academic-suggestor-content"></div>
+                    </div>
                     <div class="glass-card p-6 my-8">
                         <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Top AI Features</h2>
                         <div class="flex flex-wrap justify-center items-center gap-4">
@@ -1061,6 +1064,7 @@
                              <button id="suggest-project-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">💡 Personalized Projects</button>
                              <button id="study-plan-btn" class="dynamic-button ai-feature-btn">🗓️ Plan a Study Session</button>
                              <button id="career-recommender-btn" class="dynamic-button ai-feature-btn">🧭 Recommend a Career</button>
+                             <button id="news-button" class="dynamic-button ai-feature-btn">📰 Latest Education News</button>
                         </div>
                     </div>
 
@@ -1203,7 +1207,130 @@
             // Show the AI Coach FAB
             aiCoachFab.dataset.skillName = data.skill;
             aiCoachFab.classList.add('visible');
+            
+            const academicSuggestorSection = document.getElementById('academic-suggestor-section');
+            const academicLevel = document.querySelector('input[name="pursuing-class"]:checked').value;
+            if (academicLevel === 'Class 10' || academicLevel === 'Class 12') {
+                 academicSuggestorSection.classList.remove('hidden');
+                 displayAcademicSuggestorButton(academicLevel);
+            }
         }
+        
+        /**
+         * Renders the academic suggestor button.
+         * @param {string} academicLevel The current academic level of the user.
+         */
+        function displayAcademicSuggestorButton(academicLevel) {
+            const container = document.getElementById('academic-suggestor-content');
+            let buttonText = '';
+            if (academicLevel === 'Class 10') {
+                buttonText = 'Suggest Next Academic Plan';
+            } else if (academicLevel === 'Class 12') {
+                buttonText = 'Suggest Next Degree Program';
+            } else {
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="text-center">
+                    <button id="next-academic-suggestor-btn" class="dynamic-button secondary-button">${buttonText}</button>
+                    <div id="academic-suggestor-results" class="mt-4 text-left"></div>
+                </div>
+            `;
+        }
+
+        /**
+         * Fetches and displays academic suggestions for the user's current level.
+         * @param {string} academicLevel The current academic level.
+         * @param {string} currentStream The user's current stream/field.
+         */
+        async function handleNextAcademicSuggestion(academicLevel, currentStream) {
+            const container = document.getElementById('academic-suggestor-results');
+            const button = document.getElementById('next-academic-suggestor-btn');
+            button.disabled = true;
+            showLoader('Generating your next academic plan...', container);
+
+            let prompt = '';
+            let promptTitle = '';
+
+            const userSkills = skillsInput.value.trim();
+            const userInterests = interestsInput.value.trim();
+
+            // Simplified and more diverse suggestions for Class 10
+            if (academicLevel === 'Class 10') {
+                promptTitle = 'Suggested Paths After Class 10';
+                prompt = `You are a helpful academic advisor for Indian students. A student in Class 10 with interests in "${userInterests}" and skills in "${userSkills}" wants to explore their academic and vocational options.
+                Provide a mix of traditional and non-traditional paths.
+                Suggest 3 options. Each option should have a 'name' and a 'description' (1-2 simple sentences for someone with an average knowledge level). For practical options like Diploma and ITI, provide 2-3 common branches relevant to their interests.
+
+                Example structure:
+                - Path: "Science Stream (Class 11-12)"
+                - Path: "Diploma in Engineering (e.g., Computer, Mechanical)"
+                - Path: "ITI (Industrial Training Institute) in Technician trades"
+                
+                Return a JSON object with a 'suggestions' array. Each object should have 'name' and 'description' and a 'searchQuery' to find more information.`;
+            } 
+            // Simplified and diverse suggestions for Class 12
+            else if (academicLevel === 'Class 12') {
+                promptTitle = `Suggested Degree Programs After Class 12 (${currentStream})`;
+                prompt = `You are a career advisor for Indian students. A student in Class 12, currently in the "${currentStream}" stream, with interests in "${userInterests}" and skills in "${userSkills}" is looking for degree options.
+                Suggest 4 diverse degree programs in simple words. Do not only suggest B.Tech/B.E. Include options like B.B.A, B.Com, B.Sc, and other relevant fields. For each suggestion, provide a 'name', a 2-3 sentence 'description' of what the degree is about, and a 'searchQuery' for further research.`;
+            }
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            suggestions: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        name: { type: "STRING" },
+                                        description: { type: "STRING" },
+                                        searchQuery: { type: "STRING" }
+                                    },
+                                    required: ["name", "description", "searchQuery"]
+                                }
+                            }
+                        },
+                        required: ["suggestions"]
+                    }
+                }
+            };
+            
+
+            try {
+                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                let suggestionsHtml = `
+                    <h3 class="text-xl font-bold text-white mb-4">${promptTitle}</h3>
+                    <ul class="space-y-4">
+                `;
+                data.suggestions.forEach(sugg => {
+                    let link = '';
+                    if (sugg.searchQuery) {
+                        link = `<a href="https://www.google.com/search?q=${encodeURIComponent(sugg.searchQuery)}" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline text-sm">Explore courses</a>`;
+                    }
+                    suggestionsHtml += `
+                        <li class="p-4 bg-gray-900/50 rounded-lg border border-gray-700">
+                            <h4 class="font-bold text-lg text-teal-300">${sugg.name}</h4>
+                            <p class="text-gray-400 mt-1">${sugg.description}</p>
+                            ${link}
+                        </li>
+                    `;
+                });
+                suggestionsHtml += `</ul>`;
+                container.innerHTML = suggestionsHtml;
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-400">Could not generate academic suggestions. ${err.message}</p>`;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
 
         /**
          * Fetches and displays a difficulty rating for the skill.
@@ -1428,7 +1555,7 @@
                 careerBtn.style.display = 'none'; // Hide button after use
             }
         }
-
+        
         /**
          * Fetches and displays a future scope analysis in the feature modal.
          * @param {string} careerTitle The title of the career to analyze.
@@ -1502,7 +1629,7 @@
                         </div>
                     </div>
                     <div id="interview-prep-area" class="mt-8 text-center">
-                           <button id="mock-interview-btn" data-skill-name="${selectedSkill}" data-career-title="${careerTitle}" class="dynamic-button secondary-button">✨ Start Mock Interview</button>
+                            <button id="mock-interview-btn" data-skill-name="${selectedSkill}" data-career-title="${careerTitle}" class="dynamic-button secondary-button">✨ Start Mock Interview</button>
                     </div>
                     <div class="text-center mt-6">
                         <button class="close-modal-btn dynamic-button secondary-button">Close</button>
@@ -2257,13 +2384,13 @@
                     audio.play();
 
                     featureModalContent.innerHTML = `
-                           <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
-                           <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
-                               <p class="text-gray-300">${summaryText}</p>
-                           </div>
-                           <div class="text-center mt-6">
-                               <button class="close-modal-btn dynamic-button secondary-button">Close</button>
-                           </div>
+                            <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
+                            <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
+                                <p class="text-gray-300">${summaryText}</p>
+                            </div>
+                            <div class="text-center mt-6">
+                                <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                            </div>
                     `;
                     featureModalOverlay.classList.add('visible');
                 } else {
@@ -2495,7 +2622,7 @@
                                         properties: {
                                             title: { type: "STRING" },
                                             searchQuery: { type: "STRING" }
-                                        },
+                                    },
                                         required: ["title", "searchQuery"]
                                     }
                                 }
@@ -2933,6 +3060,68 @@
                 debateMessages.scrollTop = debateMessages.scrollHeight;
             }
         }
+        
+        async function handleGetEducationNews() {
+            const academicLevel = document.querySelector('input[name="pursuing-class"]:checked')?.value || 'Graduation';
+            const newsTopic = academicLevel !== 'Graduation' ? `${academicLevel} education India` : 'higher education India';
+            
+            showLoader(`Fetching the latest education news for ${academicLevel}...`, featureModalContent);
+            featureModalOverlay.classList.add('visible');
+
+            // --- Note: This is a simulated API call for the purpose of this demo. ---
+            // A real application would fetch data from a news API.
+            // A direct API call to newsdata.io would be:
+            // const newsUrl = `https://newsdata.io/api/1/news?apikey=${newsApiKey}&q=${encodeURIComponent(newsTopic)}&language=en`;
+            // const newsResponse = await fetch(newsUrl);
+            // const newsData = await newsResponse.json();
+            
+            const mockNews = [
+                {
+                    title: `New Policy on ${academicLevel} Vocational Training`,
+                    description: `The Ministry of Education has announced a new initiative for students in ${academicLevel} to promote skill-based education.`,
+                    link: `https://news.google.com/search?q=new+policy+vocational+training+${academicLevel}+India`
+                },
+                {
+                    title: `AI's Role in Future of ${academicLevel} Discussed at Tech Summit`,
+                    description: `Leaders from major tech companies and universities convened to debate how artificial intelligence will transform the educational landscape for ${academicLevel}.`,
+                    link: `https://news.google.com/search?q=ai+in+education+tech+summit+${academicLevel}`
+                },
+                {
+                    title: `Top Universities Launch Online Degree Programs for ${academicLevel}`,
+                    description: `Several prestigious institutions are making their courses more accessible by offering full degree programs entirely online, targeting students in ${academicLevel} and working professionals.`,
+                    link: `https://news.google.com/search?q=top+universities+online+degree+programs+${academicLevel}`
+                },
+                {
+                    title: `Student from ${academicLevel} Wins National Innovation Award`,
+                    description: `A team of students from a local college developed an eco-friendly water purification system and won the first prize in a national competition.`,
+                    link: `https://news.google.com/search?q=student+startup+wins+national+innovation+award+${academicLevel}`
+                }
+            ];
+
+            let newsHtml = `
+                <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Latest Education News 📰</h2>
+                <div class="space-y-4">
+            `;
+
+            mockNews.forEach(newsItem => {
+                newsHtml += `
+                    <a href="${newsItem.link}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-gray-800/50 rounded-lg border border-gray-700 hover:bg-gray-700/70 hover:border-white transition">
+                        <h4 class="font-bold text-white">${newsItem.title}</h4>
+                        <p class="text-sm text-gray-400 mt-1">${newsItem.description}</p>
+                        <span class="text-xs text-blue-400 mt-2 block">Read more on Google News...</span>
+                    </a>
+                `;
+            });
+            
+            newsHtml += `</div>
+                <div class="text-center mt-6">
+                    <button id="refresh-news-btn" class="dynamic-button secondary-button mr-4">Refresh News</button>
+                    <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                </div>
+            `;
+            
+            featureModalContent.innerHTML = newsHtml;
+        }
 
 
         // --- Event Listeners ---
@@ -2944,7 +3133,8 @@
         document.getElementById('input-section').addEventListener('click', (event) => {
             const analyzerBtn = event.target.closest('#learning-style-analyzer-btn');
             if (analyzerBtn) {
-                handleLearningStyleAnalyzer();
+                // handleLearningStyleAnalyzer(); // This feature is not implemented yet
+                alert('This feature is coming soon!');
             }
         });
 
@@ -2975,6 +3165,8 @@
             const backBtn = event.target.closest('#back-to-input-btn');
             const toggleBtn = event.target.closest('.toggle-resources-btn');
             const timelineBtn = event.target.closest('#timeline-tracker-btn');
+            const newsButton = event.target.closest('#news-button');
+            const academicSuggestorBtn = event.target.closest('#next-academic-suggestor-btn');
             
             if (suggestionCard) {
                 selectedSkill = suggestionCard.dataset.skillName;
@@ -2985,7 +3177,7 @@
                 return;
             }
 
-              if (backBtn) {
+            if (backBtn) {
                 resetUI();
                 return;
             }
@@ -3018,6 +3210,11 @@
 
             if (timelineBtn) {
                 handleTimelineTracker();
+                return;
+            }
+
+            if (newsButton) {
+                handleGetEducationNews();
                 return;
             }
 
@@ -3100,6 +3297,12 @@
             if(debateBtn) {
                 handleDebateTopic(debateBtn.dataset.skillName, debateBtn.dataset.weekTheme);
             }
+            
+            if(academicSuggestorBtn) {
+                const academicLevel = document.querySelector('input[name="pursuing-class"]:checked').value;
+                const currentStream = document.querySelector('input[name="stream"]:checked').value;
+                handleNextAcademicSuggestion(academicLevel, currentStream);
+            }
         });
         
         aiCoachFab.addEventListener('click', (event) => {
@@ -3120,6 +3323,11 @@
                 }
                 featureModalOverlay.classList.remove('visible');
             }
+            
+            const refreshNewsBtn = event.target.closest('#refresh-news-btn');
+            if (refreshNewsBtn) {
+                handleGetEducationNews();
+            }
         });
 
         aiCoachChatModalOverlay.addEventListener('click', (event) => {
@@ -3134,9 +3342,9 @@
             }
         });
         debateModalOverlay.addEventListener('submit', (event) => {
-             if (event.target.id === 'debate-form') {
-                 handleDebateRebuttal(event);
-             }
+              if (event.target.id === 'debate-form') {
+                  handleDebateRebuttal(event);
+              }
         });
 
 
