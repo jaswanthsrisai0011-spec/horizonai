@@ -100,11 +100,13 @@
             align-items: center;
             transition: opacity 0.8s ease-out, transform 0.8s ease-out;
         }
+
         #intro-overlay.hidden {
             opacity: 0;
             transform: scale(1.1);
             pointer-events: none;
         }
+
         .intro-text {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 2.5rem;
@@ -243,6 +245,7 @@
             height: 100%;
             background: rgba(0,0,0,0.7);
             backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
             z-index: 200;
             display: flex;
             justify-content: center;
@@ -359,6 +362,7 @@
             margin-bottom: 0.5rem;
             cursor: pointer;
             transition: all 0.2s ease-in-out;
+            font-size: 0.875rem;
         }
         .quiz-option:hover {
             background-color: rgba(255, 255, 255, 0.1);
@@ -471,7 +475,7 @@
 
     <div id="background-animation"></div>
 
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl min-h-screen relative z-10">
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl min-h-screen relative z-10 hidden" id="main-content">
         <!-- Header Section -->
         <header class="text-center p-6 mb-8 animate-on-load" style="animation-delay: 0.2s;">
             <h1 class="text-5xl md:text-6xl font-bold text-white" style="font-family: 'Space Grotesk', sans-serif; text-shadow: 0 0 15px rgba(255,255,255,0.3);">
@@ -482,7 +486,7 @@
             </p>
         </header>
 
-        <main id="main-content" class="hidden">
+        <div>
             <!-- Input Form Section -->
             <section id="input-section" class="glass-card p-6 md:p-8 mb-8 animate-on-load" style="animation-delay: 0.4s;">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -558,7 +562,7 @@
             <div id="results-area" class="space-y-8">
                 <!-- Content will be injected here -->
             </div>
-        </main>
+        </div>
     </div>
 
     <!-- Generic Feature Modal Structure -->
@@ -606,7 +610,8 @@
 
     <script>
         // Global API Keys
-        const geminiApiKey = "AIzaSyAr-LeVjL-d2NIareZuWDzemAdgMKF57Z0"; // Gemini API key
+        const openRouterApiKey = "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"; // OpenRouter API key
+        const geminiApiKey = "AIzaSyDnXwgMV51Nt6m-uCAdPuvVblh61VbJHwQ"; // Gemini API key is managed by the environment
         const newsApiKey = "pub_bf65ae57f1094bd0824f9ba2487685b4"; // Newsdata.io API key
         
         document.addEventListener('DOMContentLoaded', () => {
@@ -672,7 +677,7 @@
                         <label for="stream-com" class="learning-style-label">Commerce</label>
                         <input type="radio" id="stream-art" name="stream" value="Arts" class="hidden learning-style-radio">
                         <label for="stream-art" class="learning-style-label">Arts</label>
-                            <input type="radio" id="stream-med" name="stream" value="Medical" class="hidden learning-style-radio">
+                        <input type="radio" id="stream-med" name="stream" value="Medical" class="hidden learning-style-radio">
                         <label for="stream-med" class="learning-style-label">Medical</label>
                     `;
                 }
@@ -762,6 +767,7 @@
         let styleAnalyzerAnswers = [];
         let currentStyleAnalyzerQuestionIndex = 0;
         let jobTrendChart = null; // To hold the chart instance
+        let currentNews = []; // To hold current news articles
 
         /**
          * Displays an error message to the user.
@@ -816,75 +822,48 @@
                 jobTrendChart = null;
             }
         }
-
+        
         /**
-         * Generic function to make API calls with exponential backoff.
-         * @param {string} model The model to use for the API call.
+         * Generic function to make Gemini API calls.
+         * @param {string} model The model to use.
          * @param {object} payload The API request payload.
-         * @param {boolean} isJson Whether to parse the response as JSON.
          * @param {number} retryCount The current retry count.
-         * @returns {Promise<any>} The parsed data or raw text.
+         * @returns {Promise<any>} The API response.
          */
-        async function fetchFromApi(model, payload, isJson = true, retryCount = 0) {
-            let apiUrl;
-            if (model.startsWith('imagen')) {
-                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${geminiApiKey}`;
-            } else {
-                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
-            }
-            
+        async function fetchFromGeminiApi(model, payload, retryCount = 0) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Gemini API Error: ${response.status} - ${JSON.stringify(errorData)}`);
+                }
                 const result = await response.json();
                 
-                if (model.startsWith('imagen')) {
-                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                        return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                    } else {
-                        throw new Error("Image generation failed or returned an empty response.");
-                    }
-                }
-                
-                if (result.candidates && result.candidates[0]?.content?.parts[0]) {
-                    const part = result.candidates[0].content.parts[0];
-                    if (part.text) {
-                        const rawText = part.text;
-                        if (isJson) {
-                            const cleanJsonText = rawText.replace(/^```json\s*|```$/g, '');
-                            return JSON.parse(cleanJsonText);
-                        }
-                        return rawText.replace(/^```markdown\s*|```$/g, '');
-                    } else if (part.inlineData && part.inlineData.mimeType.startsWith("audio/")) {
-                            return {
-                                audioData: part.inlineData.data,
-                                mimeType: part.inlineData.mimeType
-                             };
-                    }
+                // Check if the response was blocked
+                if (result.candidates && result.candidates[0]?.finishReason === "SAFETY") {
+                    throw new Error("The request was blocked due to safety settings. Please adjust your input and try again.");
                 }
 
-                const reason = result.candidates[0]?.finishReason || 'Unknown';
-                const safetyRatings = result.candidates[0]?.safetyRatings?.map(r => `${r.category}: ${r.probability}`).join(', ') || 'No safety ratings available.';
-                console.error(`API request was blocked. Reason: ${reason}. Safety Ratings: ${safetyRatings}`);
-                throw new Error(`The request was blocked due to safety settings. Please adjust your input and try again.`);
+                return result;
+
             } catch (err) {
-                console.error("API Fetch Error:", err);
-                if (err instanceof SyntaxError) {
-                    throw new Error("The response from the AI was not in the expected format. Please try again.");
-                }
-                if (retryCount < 3) {
+                 if (retryCount < 3) {
                     const delay = Math.pow(2, retryCount) * 1000;
                     await new Promise(res => setTimeout(res, delay));
-                    return fetchFromApi(model, payload, isJson, retryCount + 1);
+                    return fetchFromGeminiApi(model, payload, retryCount + 1);
                 } else {
-                    throw new Error("The request failed after multiple retries. The service may be temporarily unavailable.");
+                    throw new Error("The Gemini API request failed after multiple retries. The service may be temporarily unavailable.");
                 }
             }
         }
+
 
         /**
          * Handles the initial request for skill suggestions.
@@ -898,34 +877,45 @@
                 return;
             }
 
-            // Get pursuing class and stream
             const pursuingClassInput = document.querySelector('input[name="pursuing-class"]:checked');
             const pursuingClass = pursuingClassInput ? pursuingClassInput.value : 'Graduation';
             
-            let userContext = `a user who is currently in '${pursuingClass}'`;
-
             const streamInput = document.querySelector('input[name="stream"]:checked');
-            if (streamInput) {
-                const stream = streamInput.value;
-                userContext += ` with a focus on the '${stream}' stream`;
-            }
+            const stream = streamInput ? streamInput.value : 'N/A';
 
             getSuggestionsBtn.disabled = true;
             getSuggestionsBtn.innerHTML = '<div class="w-5 h-5 border-2 border-white border-dashed rounded-full animate-spin mx-auto"></div>';
             showLoader("Analyzing your profile...");
             
-            const prompt = `Based on ${userContext}, with existing skills in '${skills}' and strong interests in '${interests}', suggest 6 unique and interesting new skills. Each suggestion must directly synthesize the provided skills and interests. For each suggestion, provide a 'name' (the skill) and a short, compelling 'description' (1-2 sentences) explaining why it's a perfect fit for a user with those skills and interests.`;
+            const prompt = `You are an expert learning navigator. Based on a user in '${pursuingClass}' with a focus on the '${stream}' stream, with existing skills in '${skills}' and strong interests in '${interests}', suggest 6 unique and interesting new skills. Each suggestion must directly synthesize the provided skills and interests. For each suggestion, provide a 'name' (the skill) and a short, compelling 'description' (1-2 sentences) explaining why it's a perfect fit. Provide the data as a JSON object with a 'suggestions' array.`;
             
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                systemInstruction: { parts: [{ text: "You are an expert learning navigator. Your suggestions should be creative, relevant, and directly connect the user's existing skills and interests to a new learning path." }] },
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { suggestions: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, description: { type: "STRING" } }, required: ["name", "description"] } } }, required: ["suggestions"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            suggestions: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        name: { type: "STRING" },
+                                        description: { type: "STRING" }
+                                    },
+                                    required: ["name", "description"]
+                                }
+                            }
+                        },
+                        required: ["suggestions"]
+                    }
                 }
             };
+            
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 displaySuggestions(data.suggestions);
             } catch (err) {
                 showError(err.message);
@@ -1014,14 +1004,26 @@
             
             const platformSchema = { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, description: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["name", "description", "searchQuery"] } };
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { skill: { type: "STRING" }, roadmap: { type: "ARRAY", items: { type: "OBJECT", properties: { week: { type: "NUMBER" }, theme: { type: "STRING" }, goals: { type: "ARRAY", items: { type: "STRING" } }, resources: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["title", "searchQuery"] } } }, required: ["week", "theme", "goals", "resources"] } }, freePlatforms: platformSchema, paidPlatforms: platformSchema, books: platformSchema }, required: ["skill", "roadmap", "freePlatforms", "paidPlatforms", "books"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            skill: { type: "STRING" },
+                            roadmap: { type: "ARRAY", items: { type: "OBJECT", properties: { week: { type: "NUMBER" }, theme: { type: "STRING" }, goals: { type: "ARRAY", items: { type: "STRING" } }, resources: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["title", "searchQuery"] } } }, required: ["week", "theme", "goals", "resources"] } },
+                            freePlatforms: platformSchema,
+                            paidPlatforms: platformSchema,
+                            books: platformSchema
+                        },
+                        required: ["skill", "roadmap", "freePlatforms", "paidPlatforms", "books"]
+                    }
                 }
             };
+
             try {
-                roadmapData = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                roadmapData = JSON.parse(result.candidates[0].content.parts[0].text);
                 displayRoadmap(roadmapData);
             } catch (err) {
                 showError(err.message);
@@ -1059,12 +1061,12 @@
                     <div class="glass-card p-6 my-8">
                         <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Top AI Features</h2>
                         <div class="flex flex-wrap justify-center items-center gap-4">
-                             <button id="setup-guide-btn" class="dynamic-button ai-feature-btn">🚀 Setup Guide</button>
-                             <button id="deep-dive-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">✨ Deep Dive</button>
-                             <button id="suggest-project-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">💡 Personalized Projects</button>
-                             <button id="study-plan-btn" class="dynamic-button ai-feature-btn">🗓️ Plan a Study Session</button>
-                             <button id="career-recommender-btn" class="dynamic-button ai-feature-btn">🧭 Recommend a Career</button>
-                             <button id="news-button" class="dynamic-button ai-feature-btn">📰 Latest Education News</button>
+                               <button id="setup-guide-btn" class="dynamic-button ai-feature-btn">🚀 Setup Guide</button>
+                               <button id="deep-dive-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">✨ Deep Dive</button>
+                               <button id="suggest-project-btn" data-skill-name="${data.skill}" class="dynamic-button ai-feature-btn">💡 Personalized Projects</button>
+                               <button id="study-plan-btn" class="dynamic-button ai-feature-btn">🗓️ Plan a Study Session</button>
+                               <button id="career-recommender-btn" class="dynamic-button ai-feature-btn">🧭 Recommend a Career</button>
+                               <button id="news-button" class="dynamic-button ai-feature-btn">📰 Latest Education News</button>
                         </div>
                     </div>
 
@@ -1095,14 +1097,14 @@
                             <div class="glass-card p-4 my-4 rounded-xl">
                                 <h4 class="font-semibold text-center text-white mb-3" style="font-family: 'Orbitron', sans-serif;">✨ AI Learning Toolkit ✨</h4>
                                 <div class="flex flex-wrap gap-2 justify-center">
-                                     <button class="eli5-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">👶 ELI5</button>
-                                     <button class="scenario-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">💼 Real-World Scenario</button>
-                                     <button class="im-stuck-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🆘 I'm Stuck!</button>
-                                     <button class="quiz-me-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🧠 Quiz Me</button>
-                                     <button class="flashcard-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🃏 Flashcards</button>
-                                     <button class="visualize-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🎨 Visualize</button>
-                                     <button class="concept-connector-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🔗 Link Concepts</button>
-                                     <button class="debate-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">⚔️ Debate Topic</button>
+                                    <button class="eli5-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">👶 ELI5</button>
+                                    <button class="scenario-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">💼 Real-World Scenario</button>
+                                    <button class="im-stuck-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🆘 I'm Stuck!</button>
+                                    <button class="quiz-me-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🧠 Quiz Me</button>
+                                    <button class="flashcard-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🃏 Flashcards</button>
+                                    <button class="visualize-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🎨 Visualize</button>
+                                    <button class="concept-connector-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">🔗 Link Concepts</button>
+                                    <button class="debate-btn dynamic-button !px-3 !py-1 text-sm" data-week-theme="${week.theme}" data-skill-name="${data.skill}">⚔️ Debate Topic</button>
                                 </div>
                             </div>
                             <div class="mt-4 p-4 bg-gray-900/50 border border-gray-700 rounded-lg">
@@ -1117,6 +1119,12 @@
                                     <ion-icon name="chevron-down-outline" class="transition-transform duration-300 text-xl"></ion-icon>
                                 </button>
                                 <ul class="resource-list hidden space-y-2">
+                                    <li>
+                                        <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(`${data.skill} ${week.theme} tutorial`)}" target="_blank" rel="noopener noreferrer" class="flex items-center p-3 rounded-lg bg-red-900/50 hover:bg-red-800/70 border border-red-700 hover:border-red-500 transition-all duration-200">
+                                            <ion-icon name="logo-youtube" class="text-2xl mr-3 text-red-500"></ion-icon>
+                                            <span class="font-medium text-gray-300">YouTube Video Tutorials for ${week.theme}</span>
+                                        </a>
+                                    </li>
                                     ${week.resources.map(resource => `
                                     <li>
                                         <a href="https://www.google.com/search?q=${encodeURIComponent(resource.searchQuery)}" target="_blank" rel="noopener noreferrer" class="flex items-center p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 border border-gray-700 hover:border-blue-400 transition-all duration-200">
@@ -1156,11 +1164,16 @@
             if(data.freePlatforms && data.freePlatforms.length > 0) {
                 roadmapHtml += `<div class="mb-8 animate-on-load" style="animation-delay: ${data.roadmap.length * 200}ms;">
                                         <h3 class="text-2xl font-bold text-center text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Free Learning Platforms</h3>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${data.freePlatforms.map(p => `
-                                            <a href="https://www.google.com/search?q=${encodeURIComponent(p.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-green-900/30 rounded-lg border border-green-700 hover:bg-green-800/50 hover:border-green-500 transition">
-                                                <h4 class="font-bold text-green-300">${p.name}</h4>
-                                                <p class="text-sm text-green-400 mt-1">${p.description}</p>
-                                            </a>`).join('')}
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(data.skill)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-red-900/30 rounded-lg border border-red-700 hover:bg-red-800/50 hover:border-red-500 transition">
+                                                <h4 class="font-bold text-red-300">YouTube</h4>
+                                                <p class="text-sm text-red-400 mt-1">A vast library of video tutorials and explanations for free.</p>
+                                            </a>
+                                            ${data.freePlatforms.map(p => `
+                                                <a href="https://www.google.com/search?q=${encodeURIComponent(p.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-green-900/30 rounded-lg border border-green-700 hover:bg-green-800/50 hover:border-green-500 transition">
+                                                    <h4 class="font-bold text-green-300">${p.name}</h4>
+                                                    <p class="text-sm text-green-400 mt-1">${p.description}</p>
+                                                </a>`).join('')}
                                         </div></div>`;
             }
 
@@ -1168,20 +1181,20 @@
                 roadmapHtml += `<div class="animate-on-load" style="animation-delay: ${data.roadmap.length * 200 + 100}ms;">
                                         <h3 class="text-2xl font-bold text-center text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">Premium Platforms</h3>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${data.paidPlatforms.map(p => `
-                                            <a href="https://www.google.com/search?q=${encodeURIComponent(p.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-purple-900/30 rounded-lg border border-purple-700 hover:bg-purple-800/50 hover:border-purple-500 transition">
-                                                <h4 class="font-bold text-purple-300">${p.name}</h4>
-                                                <p class="text-sm text-purple-400 mt-1">${p.description}</p>
-                                            </a>`).join('')}
+                                                <a href="https://www.google.com/search?q=${encodeURIComponent(p.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-purple-900/30 rounded-lg border border-purple-700 hover:bg-purple-800/50 hover:border-purple-500 transition">
+                                                    <h4 class="font-bold text-purple-300">${p.name}</h4>
+                                                    <p class="text-sm text-purple-400 mt-1">${p.description}</p>
+                                                </a>`).join('')}
                                         </div></div>`;
             }
             if(data.books && data.books.length > 0) {
                 roadmapHtml += `<div class="mt-8 animate-on-load" style="animation-delay: ${data.roadmap.length * 200 + 250}ms;">
                                         <h3 class="text-2xl font-bold text-center text-white mb-4" style="font-family: 'Space Grotesk', sans-serif;">E-books & Best Books</h3>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${data.books.map(b => `
-                                            <a href="https://www.google.com/search?q=${encodeURIComponent(b.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-amber-900/30 rounded-lg border border-amber-700 hover:bg-amber-800/50 hover:border-amber-500 transition">
-                                                <h4 class="font-bold text-amber-300">${b.name}</h4>
-                                                <p class="text-sm text-amber-400 mt-1">${b.description}</p>
-                                            </a>`).join('')}
+                                                <a href="https://www.google.com/search?q=${encodeURIComponent(b.searchQuery)}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-amber-900/30 rounded-lg border border-amber-700 hover:bg-amber-800/50 hover:border-amber-500 transition">
+                                                    <h4 class="font-bold text-amber-300">${b.name}</h4>
+                                                    <p class="text-sm text-amber-400 mt-1">${b.description}</p>
+                                                </a>`).join('')}
                                         </div></div>`;
             }
             roadmapHtml += `</div>`;
@@ -1252,33 +1265,19 @@
 
             let prompt = '';
             let promptTitle = '';
-
             const userSkills = skillsInput.value.trim();
             const userInterests = interestsInput.value.trim();
 
-            // Simplified and more diverse suggestions for Class 10
             if (academicLevel === 'Class 10') {
                 promptTitle = 'Suggested Paths After Class 10';
-                prompt = `You are a helpful academic advisor for Indian students. A student in Class 10 with interests in "${userInterests}" and skills in "${userSkills}" wants to explore their academic and vocational options.
-                Provide a mix of traditional and non-traditional paths.
-                Suggest 3 options. Each option should have a 'name' and a 'description' (1-2 simple sentences for someone with an average knowledge level). For practical options like Diploma and ITI, provide 2-3 common branches relevant to their interests.
-
-                Example structure:
-                - Path: "Science Stream (Class 11-12)"
-                - Path: "Diploma in Engineering (e.g., Computer, Mechanical)"
-                - Path: "ITI (Industrial Training Institute) in Technician trades"
-                
-                Return a JSON object with a 'suggestions' array. Each object should have 'name' and 'description' and a 'searchQuery' to find more information.`;
-            } 
-            // Simplified and diverse suggestions for Class 12
-            else if (academicLevel === 'Class 12') {
+                prompt = `You are a helpful academic advisor for Indian students. A student in Class 10 with interests in "${userInterests}" and skills in "${userSkills}" wants to explore their academic and vocational options. Provide a mix of traditional and non-traditional paths. Suggest 3 options. Each option should have a 'name' and a 'description' (1-2 simple sentences for someone with an average knowledge level). For practical options like Diploma and ITI, provide 2-3 common branches relevant to their interests. Return a JSON object with a 'suggestions' array. Each object should have 'name' and 'description' and a 'searchQuery' to find more information.`;
+            } else if (academicLevel === 'Class 12') {
                 promptTitle = `Suggested Degree Programs After Class 12 (${currentStream})`;
-                prompt = `You are a career advisor for Indian students. A student in Class 12, currently in the "${currentStream}" stream, with interests in "${userInterests}" and skills in "${userSkills}" is looking for degree options.
-                Suggest 4 diverse degree programs in simple words. Do not only suggest B.Tech/B.E. Include options like B.B.A, B.Com, B.Sc, and other relevant fields. For each suggestion, provide a 'name', a 2-3 sentence 'description' of what the degree is about, and a 'searchQuery' for further research.`;
+                prompt = `You are a career advisor for Indian students. A student in Class 12, currently in the "${currentStream}" stream, with interests in "${userInterests}" and skills in "${userSkills}" is looking for degree options. Suggest 4 diverse degree programs in simple words. Do not only suggest B.Tech/B.E. Include options like B.B.A, B.Com, B.Sc, and other relevant fields. For each suggestion, provide a 'name', a 2-3 sentence 'description' of what the degree is about, and a 'searchQuery' for further research.`;
             }
 
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -1304,7 +1303,8 @@
             
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let suggestionsHtml = `
                     <h3 class="text-xl font-bold text-white mb-4">${promptTitle}</h3>
                     <ul class="space-y-4">
@@ -1316,7 +1316,7 @@
                     }
                     suggestionsHtml += `
                         <li class="p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-                            <h4 class="font-bold text-lg text-teal-300">${sugg.name}</h4>
+                            <h4 class="font-bold text-teal-300">${sugg.name}</h4>
                             <p class="text-gray-400 mt-1">${sugg.description}</p>
                             ${link}
                         </li>
@@ -1358,7 +1358,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 container.innerHTML = `
                     <div class="flex items-center justify-center">
                         <div class="font-bold text-white text-lg" style="font-family: 'Space Grotesk', sans-serif;">Toughness:</div>
@@ -1367,7 +1368,7 @@
                     <p class="text-xs text-gray-500 mt-1">${data.justification}</p>
                 `;
             } catch (err) {
-                container.innerHTML = `<p class="text-xs text-red-400">Could not analyze difficulty.</p>`;
+                container.innerHTML = `<p class="text-xs text-red-400">Could not analyze difficulty. ${err.message}</p>`;
             }
         }
 
@@ -1378,19 +1379,29 @@
         async function renderJobTrendGraph(skillName) {
             if (jobTrendChart) {
                 jobTrendChart.destroy();
+                jobTrendChart = null;
             }
 
             const prompt = `Analyze the job market trend for the skill "${skillName}". Is the demand expected to be in high growth, moderate growth, stable, or declining over the next 8 years? Also, provide a realistic but fictional base number of job openings (as a single number, e.g., 45000) for 4 years ago to start a chart from. Return a JSON object with 'trend' (string: "high growth", "moderate growth", "stable", or "declining") and 'base_jobs' (number).`;
-              const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { trend: { type: "STRING" }, base_jobs: { type: "NUMBER" } }, required: ["trend", "base_jobs"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            trend: { type: "STRING" },
+                            base_jobs: { type: "NUMBER" }
+                        },
+                        required: ["trend", "base_jobs"]
+                    }
                 }
             };
+            
 
             try {
-                const trendData = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const trendData = JSON.parse(result.candidates[0].content.parts[0].text);
                 
                 let multiplier;
                 switch (trendData.trend) {
@@ -1413,8 +1424,8 @@
                 dataPoints.push(currentJobs);
 
                 for (let i = 0; i < 5; i++) {
-                     currentJobs = currentJobs * (multiplier - 0.05 + Math.random() * 0.1); // Add some randomness
-                     dataPoints.push(Math.round(currentJobs));
+                    currentJobs = currentJobs * (multiplier - 0.05 + Math.random() * 0.1); // Add some randomness
+                    dataPoints.push(Math.round(currentJobs));
                 }
                 
                 const canvasElement = document.getElementById('jobTrendChart');
@@ -1470,7 +1481,7 @@
             } catch (err) {
                 console.error("Could not render job trend graph:", err);
                 const chartSection = document.getElementById('job-trend-section');
-                if(chartSection) chartSection.innerHTML = `<p class="text-xs text-red-400">Could not generate job trend data.</p>`;
+                if(chartSection) chartSection.innerHTML = `<p class="text-xs text-red-400">Could not generate job trend data. ${err.message}</p>`;
             }
         }
 
@@ -1489,15 +1500,25 @@
             3.  **Why learn it?** Describe the value and benefits of learning this skill for personal or professional growth.
             Keep the tone encouraging and accessible.`;
             
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }],
-                 generationConfig: {
-                     responseMimeType: "application/json",
-                     responseSchema: { type: "OBJECT", properties: { what_is_it: { type: "STRING" }, why_useful: { type: "STRING" }, why_learn: { type: "STRING" } }, required: ["what_is_it", "why_useful", "why_learn"] }
-                   }
-             };
+            const payload = { 
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            what_is_it: { type: "STRING" },
+                            why_useful: { type: "STRING" },
+                            why_learn: { type: "STRING" }
+                        },
+                        required: ["what_is_it", "why_useful", "why_learn"]
+                    }
+                }
+            };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 featureModalContent.innerHTML = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Deep Dive: ${skillName}</h2>
                     <div class="text-gray-300 space-y-4">
@@ -1529,15 +1550,32 @@
 
             const prompt = `For someone learning the skill "${skillName}", suggest 3-4 potential career paths. For each career, provide a 'title' and a short 'description' (1-2 sentences) of what the role entails and how it uses the skill.`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { careers: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, description: { type: "STRING" } }, required: ["title", "description"] } } }, required: ["careers"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            careers: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        title: { type: "STRING" },
+                                        description: { type: "STRING" }
+                                    },
+                                    required: ["title", "description"]
+                                }
+                            }
+                        },
+                        required: ["careers"]
+                    }
                 }
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let careersHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">';
                 data.careers.forEach(career => {
                     careersHtml += `
@@ -1570,7 +1608,7 @@
             3. "top_companies": An array of 3-4 strings listing top companies hiring for this role globally.`;
             
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -1594,7 +1632,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 featureModalContent.innerHTML = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Career Deep Dive: ${careerTitle}</h2>
                     <div class="text-gray-300 space-y-6">
@@ -1650,8 +1689,8 @@
 
             const userInterests = interestsInput.value.trim();
             const prompt = `A user is learning '${skillName}' and is interested in '${userInterests}'. Generate 3 unique, beginner-friendly project ideas that combine the skill with their interests. For each, provide a "title" and a one-sentence "description".`;
-              const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -1675,7 +1714,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let projectsHtml = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Personalized Project Ideas ✨</h2>
                     <div class="space-y-4">
@@ -1710,7 +1750,7 @@
             const prompt = `Provide a detailed project brief for a beginner creating a "${projectTitle}" to practice the skill "${skillName}". The response should be a JSON object with the following keys: "project_overview" (a 2-3 sentence summary), "core_features" (an array of 3-4 key features to implement), "tech_stack_suggestions" (an array of suggested technologies), and "example_links" (an array of 2-3 objects, each with a "title" and a "searchQuery" to find similar real-world examples).`;
             
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -1737,7 +1777,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let detailsHtml = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Project Brief: ${projectTitle}</h2>
                     <div class="text-gray-300 space-y-4">
@@ -1848,11 +1889,12 @@
             ${userInput}`;
 
             const payload = {
-                contents: [...chatHistory, { role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }]
             };
 
             try {
-                const responseText = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const responseText = result.candidates[0].content.parts[0].text;
                 
                 // Update history
                 chatHistory.push({ role: "user", parts: [{ text: userInput }] });
@@ -1860,7 +1902,7 @@
                 
                 // Display model response
                 const thinkingIndicator = document.getElementById('thinking-indicator');
-                thinkingIndicator.remove();
+                if(thinkingIndicator) thinkingIndicator.remove();
 
                 chatMessages.innerHTML += `
                     <div class="chat-message model">
@@ -1869,7 +1911,7 @@
                 `;
             } catch (err) {
                 const thinkingIndicator = document.getElementById('thinking-indicator');
-                thinkingIndicator.remove();
+                if(thinkingIndicator) thinkingIndicator.remove();
                 chatMessages.innerHTML += `
                     <div class="chat-message model">
                         <div class="chat-bubble model text-red-400">Sorry, I had trouble connecting. Please try again.</div>
@@ -1893,15 +1935,33 @@
 
             const prompt = `Create a series of 3-4 simple, sequential setup steps for a beginner learning '${skillName}'. The steps should cover environment setup, installing necessary software, and running a 'hello world' equivalent. Provide a JSON object with a 'setupSteps' array. Each object in the array should have a 'title' (e.g., 'Step 1: Install Python'), a 'description' (a few sentences explaining how and why), and a 'searchQuery' (a concise Google search term to find a tutorial or download page for that step).`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { setupSteps: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, description: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["title", "description", "searchQuery"] } } }, required: ["setupSteps"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            setupSteps: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        title: { type: "STRING" },
+                                        description: { type: "STRING" },
+                                        searchQuery: { type: "STRING" }
+                                    },
+                                    required: ["title", "description", "searchQuery"]
+                                }
+                            }
+                        },
+                        required: ["setupSteps"]
+                    }
                 }
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 currentSetupSteps = data.setupSteps;
                 currentStepIndex = 0;
                 displaySetupStep();
@@ -1949,15 +2009,33 @@
 
             const prompt = `You are an AI tutor. Create a simple multiple-choice quiz with 3 questions to test a beginner's understanding of the topic: '${weekTheme}' for the skill '${skillName}'. Provide the response as a JSON object with a 'quiz' array. Each item in the array should have a 'question', an array of 'options', and the 'correctAnswer' (the text of the correct option).`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { quiz: { type: "ARRAY", items: { type: "OBJECT", properties: { question: { type: "STRING" }, options: { type: "ARRAY", items: { type: "STRING" } }, correctAnswer: { type: "STRING" } }, required: ["question", "options", "correctAnswer"] } } }, required: ["quiz"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            quiz: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        question: { type: "STRING" },
+                                        options: { type: "ARRAY", items: { type: "STRING" } },
+                                        correctAnswer: { type: "STRING" }
+                                    },
+                                    required: ["question", "options", "correctAnswer"]
+                                }
+                            }
+                        },
+                        required: ["quiz"]
+                    }
                 }
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 displayQuiz(data.quiz);
             } catch (err) {
                 featureModalContent.innerHTML = `<p class="text-red-400">Could not generate a quiz. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
@@ -2001,10 +2079,11 @@
             analogyArea.innerHTML = `<div class="flex justify-center items-center text-sm text-gray-400"><div class="w-4 h-4 border-2 border-dashed rounded-full animate-spin mr-2"></div>Generating analogy...</div>`;
             
             const prompt = `Explain the concept of '${skillName}' using a simple, relatable analogy for a complete beginner.`;
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
             try {
-                const analogy = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const analogy = result.candidates[0].content.parts[0].text;
                 analogyArea.innerHTML = `
                     <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
                         <h4 class="font-semibold text-lg text-white mb-2">🤔 Analogy Time</h4>
@@ -2012,7 +2091,7 @@
                     </div>
                 `;
             } catch (err) {
-                analogyArea.innerHTML = `<p class="text-xs text-red-400">Could not generate an analogy.</p>`;
+                analogyArea.innerHTML = `<p class="text-xs text-red-400">Could not generate an analogy. ${err.message}</p>`;
             }
         }
 
@@ -2046,17 +2125,18 @@
             showLoader('Thinking of a new way to explain this...', responseArea);
 
             const prompt = `You are a helpful AI tutor. A beginner learning '${skillName}' is stuck on a concept from their lesson on '${weekTheme}'. They describe their problem as: "${problemDescription}". Please provide a simple, clear explanation from a different perspective or use an analogy to help them understand. Do not just repeat the definition.`;
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
             try {
-                const helpText = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const helpText = result.candidates[0].content.parts[0].text;
                 responseArea.innerHTML = `
                     <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
                         <p class="text-gray-300">${helpText.replace(/\n/g, '<br>')}</p>
                     </div>
                 `;
             } catch (err) {
-                responseArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't generate an explanation right now.</p>`;
+                responseArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't generate an explanation right now. ${err.message}</p>`;
             }
         }
 
@@ -2090,17 +2170,18 @@
             showLoader('Analyzing your code...', responseArea);
 
             const prompt = `You are a friendly and constructive AI code reviewer. A beginner learning '${skillName}' has submitted their code for a project called '${projectTitle}'. Their code is:\n\n\`\`\`\n${userCode}\n\`\`\`\n\nPlease provide helpful feedback. Focus on one or two key areas for improvement. Explain *why* a change is better, not just what to change. Keep the tone encouraging.`;
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
             try {
-                const critique = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const critique = result.candidates[0].content.parts[0].text;
                 responseArea.innerHTML = `
                     <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
                         <p class="text-gray-300">${critique.replace(/\n/g, '<br>')}</p>
                     </div>
                 `;
             } catch (err) {
-                responseArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't critique the code right now.</p>`;
+                responseArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't critique the code right now. ${err.message}</p>`;
             }
         }
         
@@ -2111,9 +2192,9 @@
             showLoader('Creating a quiz to discover your interests...', featureModalContent);
             featureModalOverlay.classList.add('visible');
 
-            const prompt = `Create a 5-question multiple-choice quiz designed to help a user discover a new skill to learn. The questions should be about their personality and preferences (e.g., problem-solving vs. creating, working with data vs. people). Each question should have 3-4 options. Return a JSON object with a 'quiz' array. Each item in the array should have a 'question' (string) and an 'options' array (array of strings).`;
+            const prompt = `Create a 5-question multiple-choice quiz designed to help a user discover a new skill to learn. The questions should be about their personality and preferences (e.g., problem-solving vs. creating, working with data vs. people). Each question should have 3-4 options. Return a JSON object with a 'quiz' array. Each item in the array should have a 'question', an array of 'options', and the 'correctAnswer' (the text of the correct option).`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2125,9 +2206,10 @@
                                     type: "OBJECT",
                                     properties: {
                                         question: { type: "STRING" },
-                                        options: { type: "ARRAY", items: { type: "STRING" } }
+                                        options: { type: "ARRAY", items: { type: "STRING" } },
+                                        correctAnswer: { type: "STRING" }
                                     },
-                                    required: ["question", "options"]
+                                    required: ["question", "options", "correctAnswer"]
                                 }
                             }
                         },
@@ -2137,7 +2219,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 displayInterestQuiz(data.quiz);
             } catch (err) {
                 featureModalContent.innerHTML = `<p class="text-red-400">Could not generate the quiz. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
@@ -2184,7 +2267,7 @@
             const prompt = `Based on the following quiz answers, suggest one main interest or learning domain for the user. Also provide two alternative suggestions. The goal is to populate an "interests" input field for a learning app. Keep the suggestions concise (2-3 words). Format the response as a JSON object with a 'suggestions' array. Each object in the array should have a 'domain' (string) and a 'reason' (string, 1 sentence). The first item in the array should be the top recommendation.\n\nAnswers:\n${answersString}`;
             
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2208,7 +2291,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 if (data.suggestions && data.suggestions.length > 0) {
                     const topSuggestion = data.suggestions[0].domain;
                     interestsInput.value = topSuggestion;
@@ -2246,15 +2330,32 @@
 
             const prompt = `You are an AI tutor. For a beginner learning '${skillName}', create a set of 4-6 flashcards for the topic '${weekTheme}'. Each flashcard should have a 'term' (a key concept or keyword) and a 'definition' (a simple, concise explanation). Return this as a JSON object with a 'flashcards' array.`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { flashcards: { type: "ARRAY", items: { type: "OBJECT", properties: { term: { type: "STRING" }, definition: { type: "STRING" } }, required: ["term", "definition"] } } }, required: ["flashcards"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            flashcards: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        term: { type: "STRING" },
+                                        definition: { type: "STRING" }
+                                    },
+                                    required: ["term", "definition"]
+                                }
+                            }
+                        },
+                        required: ["flashcards"]
+                    }
                 }
             };
             
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let flashcardsHtml = `
                     <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Flashcards: ${weekTheme}</h2>
                     <p class="text-center text-gray-400 mb-6">Click a card to flip it over.</p>
@@ -2286,7 +2387,7 @@
          */
         function handleStudySessionPlanner() {
             if (!roadmapData) return;
-            const skillName = roadmapData.skill;
+            const skillName = roadmap.skill;
             let html = `
                 <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Plan a Study Session</h2>
                 <p class="text-center text-gray-400 mb-4">Let's schedule a focused learning block for "${skillName}".</p>
@@ -2321,15 +2422,32 @@
 
             const prompt = `Create a structured study plan for a ${duration}-minute session. The user is learning '${skillName}' and wants to focus on '${topic}'. The plan should break down the session into timed activities, including at least one short break. Use the Pomodoro technique as inspiration. Return a JSON object with a 'plan' array. Each object in the array should have 'activity' (string) and 'duration_minutes' (number).`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { plan: { type: "ARRAY", items: { type: "OBJECT", properties: { activity: { type: "STRING" }, duration_minutes: { type: "NUMBER" } }, required: ["activity", "duration_minutes"] } } }, required: ["plan"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            plan: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        activity: { type: "STRING" },
+                                        duration_minutes: { type: "NUMBER" }
+                                    },
+                                    required: ["activity", "duration_minutes"]
+                                }
+                            }
+                        },
+                        required: ["plan"]
+                    }
                 }
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let planHtml = `
                     <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
                         <h3 class="font-bold text-lg text-white mb-3">Your Focused Study Plan:</h3>
@@ -2346,7 +2464,7 @@
                 planHtml += `</ul></div>`;
                 responseArea.innerHTML = planHtml;
             } catch (err) {
-                responseArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't generate a study plan right now.</p>`;
+                responseArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't generate a study plan right now. ${err.message}</p>`;
             }
         }
 
@@ -2361,17 +2479,16 @@
 
             try {
                 const summaryPrompt = `You are an encouraging AI learning coach. The user has a ${roadmapData.roadmap.length}-week learning plan for '${roadmapData.skill}'. Briefly summarize the journey ahead, highlighting the key themes for the first few weeks and the exciting projects they'll be able to build by the end. Keep it under 100 words and make it sound exciting.`;
-                const summaryPayload = { contents: [{ role: "user", parts: [{ text: summaryPrompt }] }] };
-                const summaryText = await fetchFromApi('gemini-2.5-flash-preview-05-20', summaryPayload, false);
-
+                
                 const ttsPayload = {
-                    contents: [{ parts: [{ text: `Say with an upbeat and encouraging tone: ${summaryText}` }] }],
+                    contents: [{ parts: [{ text: `Say with an upbeat and encouraging tone: ${summaryPrompt}` }] }],
                     generationConfig: { responseModalities: ["AUDIO"] },
                     model: "gemini-2.5-flash-preview-tts"
                 };
-                const audioResponse = await fetchFromApi('gemini-2.5-flash-preview-tts', ttsPayload, false);
 
+                const audioResponse = await fetchFromGeminiApi("gemini-2.5-flash-preview-tts", ttsPayload);
                 const sampleRateMatch = audioResponse.mimeType.match(/rate=(\d+)/);
+                
                 if (audioResponse.audioData && sampleRateMatch) {
                     const sampleRate = parseInt(sampleRateMatch[1], 10);
                     const pcmData = base64ToArrayBuffer(audioResponse.audioData);
@@ -2380,28 +2497,29 @@
                     const audioUrl = URL.createObjectURL(wavBlob);
                     
                     const audio = new Audio(audioUrl);
-                    currentNarration = audio; // Store the audio object
+                    currentNarration = audio;
                     audio.play();
-
-                    featureModalContent.innerHTML = `
-                            <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
-                            <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
-                                <p class="text-gray-300">${summaryText}</p>
-                            </div>
-                            <div class="text-center mt-6">
-                                <button class="close-modal-btn dynamic-button secondary-button">Close</button>
-                            </div>
-                    `;
-                    featureModalOverlay.classList.add('visible');
                 } else {
                     throw new Error("Invalid audio data received from API.");
                 }
 
+                featureModalContent.innerHTML = `
+                        <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Your Learning Journey 🎧</h2>
+                        <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
+                            <p class="text-gray-300">${summaryPrompt}</p>
+                            <p class="text-sm text-yellow-400 mt-2">Playing the narrated summary...</p>
+                        </div>
+                        <div class="text-center mt-6">
+                            <button class="close-modal-btn dynamic-button secondary-button">Close</button>
+                        </div>
+                `;
+                featureModalOverlay.classList.add('visible');
+
             } catch (err) {
                 showError(`Narration failed: ${err.message}`);
+                narrateBtn.textContent = '🎧'; // Reset button text
             } finally {
                 narrateBtn.disabled = false;
-                narrateBtn.textContent = '🎧';
             }
         }
         
@@ -2456,15 +2574,25 @@
 
             const prompt = `Generate 3 common interview questions for a '${careerTitle}' role that specifically test the candidate's knowledge of '${skillName}'. Return this as a JSON object with an 'interviewQuestions' array of strings.`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { interviewQuestions: { type: "ARRAY", items: { type: "STRING" } } }, required: ["interviewQuestions"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            interviewQuestions: {
+                                type: "ARRAY",
+                                items: { type: "STRING" }
+                            }
+                        },
+                        required: ["interviewQuestions"]
+                    }
                 }
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 currentInterviewQuestions = data.interviewQuestions;
                 currentInterviewQuestionIndex = 0;
                 displayCurrentInterviewQuestion();
@@ -2507,10 +2635,11 @@
             showLoader('Analyzing your answer...', feedbackArea);
 
             const prompt = `You are a helpful and constructive hiring manager. The interview question was: "${question}". The candidate's answer is: "${answer}". Provide feedback on the answer, focusing on clarity, technical accuracy, and structure. Start with "Feedback:", and keep it concise (2-3 sentences).`;
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
             try {
-                const feedback = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const feedback = result.candidates[0].content.parts[0].text;
                 feedbackArea.innerHTML = `
                     <div class="p-4 bg-gray-900/50 border border-teal-500 rounded-lg text-left">
                         <p class="text-gray-300">${feedback.replace(/\n/g, '<br>')}</p>
@@ -2519,7 +2648,7 @@
                 submitBtn.classList.add('hidden');
                 nextBtn.classList.remove('hidden');
             } catch (err) {
-                feedbackArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't generate feedback right now.</p>`;
+                feedbackArea.innerHTML = `<p class="text-xs text-red-400">Sorry, I couldn't generate feedback right now. ${err.message}</p>`;
                 submitBtn.disabled = false;
             }
         }
@@ -2531,10 +2660,11 @@
             featureModalOverlay.classList.add('visible');
 
             const prompt = `Explain the concept of '${weekTheme}' from the topic '${skillName}' like I'm 5 years old. Use a simple analogy.`;
-            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
             try {
-                const explanation = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const explanation = result.candidates[0].content.parts[0].text;
                 featureModalContent.innerHTML = `
                     <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">ELI5: ${weekTheme}</h2>
                     <div class="p-4 bg-gray-900/50 border border-gray-700 rounded-lg text-left">
@@ -2555,7 +2685,7 @@
 
             const prompt = `Create a short, real-world scenario for a beginner learning '${skillName}' to apply their knowledge of '${weekTheme}'. The response should be a JSON object with a 'scenario_title', a 'problem_statement' (1-2 sentences), and an array of 'key_tasks' (2-3 bullet points).`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2571,7 +2701,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 featureModalContent.innerHTML = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Real-World Scenario: ${data.scenario_title}</h2>
                     <div class="text-gray-300 space-y-4">
@@ -2604,7 +2735,7 @@
             
             const prompt = `You are an expert curriculum adapter. Take the following JSON learning roadmap and adapt its weekly 'goals' and 'resources' to better suit a '${newStyle}' learning style. Do not change the weekly 'theme' or the number of weeks. Return the complete, adapted roadmap in the same JSON format. Roadmap: ${JSON.stringify(roadmapData.roadmap)}`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2622,7 +2753,7 @@
                                         properties: {
                                             title: { type: "STRING" },
                                             searchQuery: { type: "STRING" }
-                                    },
+                                        },
                                         required: ["title", "searchQuery"]
                                     }
                                 }
@@ -2634,7 +2765,8 @@
             };
             
             try {
-                const newRoadmap = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const newRoadmap = JSON.parse(result.candidates[0].content.parts[0].text);
                 roadmapData.roadmap = newRoadmap;
                 const roadmapContainer = document.getElementById('roadmap-container');
                 if(roadmapContainer) {
@@ -2671,12 +2803,19 @@
 
             const prompt = `Generate a visually appealing, high-quality image based on the following description: ${description}. Style: digital art, vibrant colors.`;
             const payload = {
-                instances: { prompt: prompt },
-                parameters: { "sampleCount": 1 }
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseModalities: ['TEXT', 'IMAGE']
+                }
             };
-
             try {
-                const imageUrl = await fetchFromApi('imagen-3.0-generate-002', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                if (!base64Data) {
+                    throw new Error("Invalid image data received from API.");
+                }
+                const imageUrl = `data:image/png;base64,${base64Data}`;
+                
                 responseArea.innerHTML = `
                     <div class="p-2 bg-gray-900/50 border border-gray-700 rounded-lg">
                         <img src="${imageUrl}" alt="AI generated visualization" class="rounded-md w-full h-auto">
@@ -2693,7 +2832,7 @@
 
             const prompt = `You are a creative educator. The user is learning about '${weekTheme}' in the context of '${skillName}'. Explain how this concept connects to 2-3 other surprising fields or real-world ideas. For example, connect programming loops to music composition or history. Return a JSON object with a 'connections' array. Each item should have a 'field' (e.g., 'Music') and a 'explanation' (a simple, interesting parallel).`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2717,7 +2856,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let html = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Concept Connector: ${weekTheme}</h2>
                     <div class="space-y-4">
@@ -2755,7 +2895,7 @@
             const prompt = `Based on a user in '${pursuingClass}' ('${stream}' stream) with skills in '${skills}' and interests in '${interests}', recommend one specific career path. Provide the response as a JSON object with a 'career_title', a 'reason' (why it's a good fit, 2 sentences), and an array of 'next_steps' (3 actionable steps to start pursuing this career).`;
 
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2771,7 +2911,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let html = `
                     <h2 class="text-2xl font-bold text-white mb-4" style="font-family: 'Orbitron', sans-serif;">Career Recommendation</h2>
                     <div class="p-4 bg-gray-900/50 border border-amber-500 rounded-lg">
@@ -2806,15 +2947,33 @@
 
             const prompt = `For a user learning '${skillName}', suggest 3-4 types of physical, offline places they could find courses or workshops. For each suggestion, provide a 'name' (e.g., 'Local Community Colleges') and a concise 'description' (1 sentence). Also provide a 'searchQuery' which is a generic Google search query a user could run to find these places near them (e.g., "'${skillName}' course at community college near me").`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
-                    responseSchema: { type: "OBJECT", properties: { centers: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, description: { type: "STRING" }, searchQuery: { type: "STRING" } }, required: ["name", "description", "searchQuery"] } } }, required: ["centers"] }
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            centers: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        name: { type: "STRING" },
+                                        description: { type: "STRING" },
+                                        searchQuery: { type: "STRING" }
+                                    },
+                                    required: ["name", "description", "searchQuery"]
+                                }
+                            }
+                        },
+                        required: ["centers"]
+                    }
                 }
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 let centersHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">';
                 data.centers.forEach(center => {
                     centersHtml += `
@@ -2845,7 +3004,7 @@
             const pursuingClass = document.querySelector('input[name="pursuing-class"]:checked')?.value || 'Graduation';
             const stream = document.querySelector('input[name="stream"]:checked')?.value || 'General';
 
-            const prompt = `You are an academic advisor AI. A user in India who is in '${pursuingClass}' with a focus on the '${stream}' stream is learning about '${selectedSkill}'. Based on the current date being September 7, 2025, generate a timeline of important upcoming academic and career-related events for them for the next 6-8 months. Include application deadlines for top entrance exams, university admissions, popular scholarships, and counseling schedules relevant to their field and level in India.
+            const prompt = `You are an academic advisor AI. A user in India who is in '${pursuingClass}' with a focus on the '${stream}' stream is learning about '${selectedSkill}'. Based on the current date being September 22, 2025, generate a timeline of important upcoming academic and career-related events for them for the next 6-8 months. Include application deadlines for top entrance exams, university admissions, popular scholarships, and counseling schedules relevant to their field and level in India.
 
             Return a JSON object with a 'timelineEvents' array. Each object in the array should have:
             1. 'eventName': The name of the event (e.g., "JEE Main 2026 Session 1 Application").
@@ -2854,7 +3013,7 @@
             4. 'description': A brief 1-sentence description of the event.`;
 
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2880,7 +3039,8 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
                 displayTimelineTracker(data.timelineEvents);
             } catch (err) {
                 featureModalContent.innerHTML = `<p class="text-red-400">Could not generate the timeline. ${err.message}</p> <div class="text-center mt-6"><button class="close-modal-btn dynamic-button secondary-button">Close</button></div>`;
@@ -2953,7 +3113,7 @@
 
             const prompt = `You are an AI that plays the role of a debate antagonist. For a beginner learning about '${skillName}', generate a controversial but debatable topic related to '${weekTheme}'. The topic should challenge a common assumption. Then, provide a strong opening argument for your side (the 'antagonist' side). Return a JSON object with 'topic' (string) and 'opening_statement' (string).`;
             const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -2968,8 +3128,9 @@
             };
 
             try {
-                const data = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload);
-                debateHistory = [{ role: "model", parts: [{ text: data.opening_statement }] }];
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                debateHistory = [{ role: "assistant", content: data.opening_statement }];
                 
                 debateModalContent.innerHTML = `
                     <div class="p-4 border-b border-gray-700 flex justify-between items-center">
@@ -3035,13 +3196,18 @@
 
             debateHistory.push({ role: "user", parts: [{ text: userInput }] });
 
-            const prompt = "You are a sharp and intelligent debate antagonist. Provide a concise, challenging, but respectful counter-argument to the user's last point. Stay in character.";
+            const systemPrompt = "You are a sharp and intelligent debate antagonist. Provide a concise, challenging, but respectful counter-argument to the user's last point. Stay in character.";
             const payload = {
-                contents: [...debateHistory, { role: "user", parts: [{ text: prompt }] }],
+                contents: debateHistory,
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
             };
+            
 
             try {
-                const responseText = await fetchFromApi('gemini-2.5-flash-preview-05-20', payload, false);
+                const result = await fetchFromGeminiApi('gemini-1.5-flash-latest', payload);
+                const responseText = result.candidates[0].content.parts[0].text;
                 debateHistory.push({ role: "model", parts: [{ text: responseText }] });
                 
                 document.getElementById('debate-thinking-indicator').remove();
@@ -3065,7 +3231,16 @@
             const academicLevel = document.querySelector('input[name="pursuing-class"]:checked')?.value || 'Graduation';
             const newsTopic = academicLevel !== 'Graduation' ? `${academicLevel} education India` : 'higher education India';
             
-            showLoader(`Fetching the latest education news for ${academicLevel}...`, featureModalContent);
+            // Re-render the modal structure with a loading state first
+            featureModalContent.innerHTML = `
+                <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Latest Education News 📰</h2>
+                <div id="news-loading-area" class="text-center p-8">
+                    <div class="flex justify-center items-center">
+                        <div class="w-8 h-8 border-4 border-dashed rounded-full animate-spin" style="border-top-color: var(--primary-glow); border-left-color: var(--primary-glow); border-right-color: transparent; border-bottom-color: transparent;"></div>
+                    </div>
+                    <p class="mt-4 text-gray-300 font-medium">Fetching the latest education news for ${academicLevel}...</p>
+                </div>
+            `;
             featureModalOverlay.classList.add('visible');
 
             // --- Note: This is a simulated API call for the purpose of this demo. ---
@@ -3098,6 +3273,10 @@
                 }
             ];
 
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Build the news HTML
             let newsHtml = `
                 <h2 class="text-2xl font-bold text-white mb-4 text-center" style="font-family: 'Orbitron', sans-serif;">Latest Education News 📰</h2>
                 <div class="space-y-4">
@@ -3121,6 +3300,9 @@
             `;
             
             featureModalContent.innerHTML = newsHtml;
+
+            // Attach the listener to the newly created button
+            document.getElementById('refresh-news-btn').addEventListener('click', handleGetEducationNews);
         }
 
 
@@ -3139,6 +3321,12 @@
         });
 
         resultsArea.addEventListener('click', (event) => {
+            const link = event.target.closest('a');
+            if (link) {
+                // If a link is clicked, let the browser handle it.
+                return;
+            }
+
             const suggestionCard = event.target.closest('.suggestion-card');
             const timePlanBtn = event.target.closest('.time-plan-btn');
             const levelBtn = event.target.closest('.level-btn');
@@ -3323,11 +3511,6 @@
                 }
                 featureModalOverlay.classList.remove('visible');
             }
-            
-            const refreshNewsBtn = event.target.closest('#refresh-news-btn');
-            if (refreshNewsBtn) {
-                handleGetEducationNews();
-            }
         });
 
         aiCoachChatModalOverlay.addEventListener('click', (event) => {
@@ -3342,9 +3525,9 @@
             }
         });
         debateModalOverlay.addEventListener('submit', (event) => {
-              if (event.target.id === 'debate-form') {
-                  handleDebateRebuttal(event);
-              }
+             if (event.target.id === 'debate-form') {
+                 handleDebateRebuttal(event);
+             }
         });
 
 
